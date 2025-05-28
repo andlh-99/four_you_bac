@@ -17,7 +17,17 @@
         window.auth;
         window.userId; // Will store the authenticated user ID
 
-        // Firebase Configuration - REPLACE THIS WITH YOUR ACTUAL FIREBASE CONFIG
+        // Firebase Configuration 
+        const firebaseConfig = {
+  apiKey: "AIzaSyB_ONaG8ZZM-C_c0EpZbCxr6-5EEsCTC7M",
+  authDomain: "bac-4you.firebaseapp.com",
+  projectId: "bac-4you",
+  storageBucket: "bac-4you.firebasestorage.app",
+  messagingSenderId: "10492385919",
+  appId: "1:10492385919:web:59570eefca36a2ab39fd4a",
+  measurementId: "G-CVCZ027PDM"
+};
+
         // If running in Canvas environment, __firebase_config will be provided automatically.
         const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {
             apiKey: "YOUR_API_KEY",
