@@ -1,26 +1,30 @@
 <!DOCTYPE html>
-<html lang="ar" dir="rtl"> <head>
+<html lang="ar" dir="rtl">
+<head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>تطبيق السكور - تيليجرام المصغر</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        /* Custom styles for the Inter font and general body styling */
         body {
             font-family: 'Inter', sans-serif;
-            background-color: #f0f2f5; /* Light gray background for the app */
+            background-color: #f0f2f5;
             display: flex;
             justify-content: center;
             align-items: center;
-            min-height: 100vh; /* Full viewport height to center content */
+            min-height: 100vh;
             margin: 0;
-            padding: 1rem; /* Add some padding for smaller screens */
-            box-sizing: border-box; /* Include padding in element's total width and height */
+            padding: 1rem;
+            box-sizing: border-box;
         }
-        /* Ensure the main container is centered and responsive */
         .container {
-            max-width: 400px; /* Max width for the card on larger screens */
-            width: 100%; /* Full width on smaller screens */
+            max-width: 400px;
+            width: 100%;
+        }
+        .error-message {
+            color: #dc2626; /* Red color for errors */
+            font-weight: bold;
+            margin-top: 1rem;
         }
     </style>
 </head>
@@ -43,112 +47,150 @@
         <button id="closeButton" class="bg-gray-400 hover:bg-gray-500 text-white font-bold py-2 px-4 rounded-lg shadow-md transition duration-300 ease-in-out transform hover:scale-105">
             إغلاق التطبيق المصغر
         </button>
+
+        <div id="appErrorMessage" class="error-message hidden"></div>
     </div>
 
-    <!-- These scripts import Firebase libraries from CDN.
-         They must be loaded before any Firebase services are used. -->
     <script type="module">
-        // Import specific Firebase functions needed for app, auth, and firestore
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, setDoc, onSnapshot, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-
-        // Global variables provided by the Canvas environment.
-        // These variables contain your Firebase project configuration and authentication token.
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
-        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
-
-        // Declare Firebase service instances and user ID variable
-        let app;
-        let db;
-        let auth;
-        let userId = null; // Stores the authenticated user's ID
 
         // Get references to HTML elements
         const currentScoreElement = document.getElementById('currentScore');
         const incrementButton = document.getElementById('incrementButton');
         const userIdDisplayElement = document.getElementById('userIdDisplay');
         const closeButton = document.getElementById('closeButton');
+        const appErrorMessageElement = document.getElementById('appErrorMessage');
+
+        // Declare Firebase service instances and user ID variable
+        let app;
+        let db;
+        let auth;
+        let userId = null;
+
+        /**
+         * Displays an error message on the UI.
+         * @param {string} message - The error message to display.
+         */
+        function displayError(message) {
+            appErrorMessageElement.textContent = message;
+            appErrorMessageElement.classList.remove('hidden');
+            currentScoreElement.textContent = "خطأ!"; // Indicate error in score display
+            incrementButton.disabled = true; // Disable button on error
+        }
 
         /**
          * Initializes Firebase services (App, Firestore, Auth) and sets up authentication listener.
          */
         function initializeFirebase() {
+            let firebaseConfig = {};
+            let appId = 'default-app-id';
+            let initialAuthToken = null;
+
+            // --- Enhanced checks for global variables ---
             try {
-                // Initialize Firebase app with the provided configuration
+                if (typeof __app_id !== 'undefined' && __app_id !== null) {
+                    appId = __app_id;
+                    console.log("Canvas App ID:", appId);
+                } else {
+                    console.warn("Canvas App ID (__app_id) is undefined or null. Using default.");
+                    displayError("خطأ: معرف التطبيق غير متوفر.");
+                    return;
+                }
+
+                if (typeof __firebase_config !== 'undefined' && __firebase_config !== null) {
+                    firebaseConfig = JSON.parse(__firebase_config);
+                    console.log("Canvas Firebase Config:", firebaseConfig);
+                } else {
+                    console.warn("Canvas Firebase Config (__firebase_config) is undefined or null.");
+                    displayError("خطأ: إعدادات Firebase غير متوفرة.");
+                    return;
+                }
+
+                if (typeof __initial_auth_token !== 'undefined') {
+                    initialAuthToken = __initial_auth_token;
+                    console.log("Canvas Initial Auth Token:", initialAuthToken ? "Available" : "Not available");
+                } else {
+                    console.warn("Canvas Initial Auth Token (__initial_auth_token) is undefined.");
+                }
+
+            } catch (e) {
+                console.error("Error parsing Firebase config or accessing global variables:", e);
+                displayError("خطأ في قراءة إعدادات Firebase الأولية.");
+                return;
+            }
+            // --- End enhanced checks ---
+
+            // Validate firebaseConfig structure before initializing
+            if (!firebaseConfig || !firebaseConfig.apiKey || !firebaseConfig.projectId) {
+                console.error("Invalid Firebase config:", firebaseConfig);
+                displayError("خطأ: إعدادات Firebase غير صالحة.");
+                return;
+            }
+
+            try {
                 app = initializeApp(firebaseConfig);
-                db = getFirestore(app); // Get Firestore instance
-                auth = getAuth(app);     // Get Auth instance
+                db = getFirestore(app);
+                auth = getAuth(app);
                 console.log("Firebase initialized successfully.");
 
-                // Set up an authentication state change listener.
-                // This ensures that Firebase operations are performed only after authentication is ready.
                 onAuthStateChanged(auth, async (user) => {
                     if (user) {
-                        // If a user is authenticated, set the userId and start listening for score changes
                         userId = user.uid;
                         console.log("User authenticated:", userId);
-                        userIdDisplayElement.textContent = userId; // Display the user ID on the UI
-                        listenForScoreChanges(userId); // Start listening for score updates
+                        userIdDisplayElement.textContent = userId;
+                        listenForScoreChanges(userId, appId); // Pass appId to listener
+                        incrementButton.disabled = false; // Enable button after auth
                     } else {
-                        // If no user is authenticated, attempt to sign in.
                         console.log("No user authenticated. Attempting sign-in...");
                         try {
                             if (initialAuthToken) {
-                                // Try signing in with the custom token provided by Canvas environment
                                 await signInWithCustomToken(auth, initialAuthToken);
                                 console.log("Signed in with custom token.");
                             } else {
-                                // If no custom token, sign in anonymously
                                 await signInAnonymously(auth);
                                 console.log("Signed in anonymously.");
                             }
                         } catch (error) {
                             console.error("Firebase authentication error:", error);
-                            userIdDisplayElement.textContent = "خطأ في المصادقة"; // Display error message
+                            displayError(`خطأ في المصادقة: ${error.message}`);
                         }
                     }
                 });
             } catch (error) {
-                console.error("Failed to initialize Firebase:", error);
-                userIdDisplayElement.textContent = "خطأ في تهيئة Firebase"; // Display initialization error
+                console.error("Failed to initialize Firebase app instance:", error);
+                displayError(`خطأ في تهيئة Firebase: ${error.message}`);
             }
         }
 
         /**
          * Sets up a real-time listener for the user's score in Firestore.
-         * Updates the UI whenever the score changes in the database.
          * @param {string} currentUserId - The ID of the currently authenticated user.
+         * @param {string} currentAppId - The application ID.
          */
-        function listenForScoreChanges(currentUserId) {
-            if (!db || !currentUserId) {
-                console.error("Firestore DB or User ID not available for listening.");
+        function listenForScoreChanges(currentUserId, currentAppId) {
+            if (!db || !currentUserId || !currentAppId) {
+                console.error("Firestore DB, User ID, or App ID not available for listening.");
+                displayError("خطأ: بيانات القاعدة غير جاهزة.");
                 return;
             }
 
-            // Define the document reference for the user's score.
-            // Data is stored in: /artifacts/{appId}/users/{userId}/scores/user_score
-            const userScoreDocRef = doc(db, `artifacts/${appId}/users/${currentUserId}/scores`, 'user_score');
+            const userScoreDocRef = doc(db, `artifacts/${currentAppId}/users/${currentUserId}/scores`, 'user_score');
 
-            // Use onSnapshot to listen for real-time changes to the document
             onSnapshot(userScoreDocRef, (docSnap) => {
                 if (docSnap.exists()) {
-                    // If the document exists, get the score and update the UI
                     const data = docSnap.data();
                     currentScoreElement.textContent = data.score !== undefined ? data.score : 0;
                     console.log("Score updated:", data.score);
                 } else {
-                    // If the document does not exist (first time user), initialize score to 0
                     currentScoreElement.textContent = 0;
                     console.log("No score found for this user. Initializing to 0.");
-                    // Set initial score to 0 in Firestore
                     setDoc(userScoreDocRef, { score: 0 }).catch(e => console.error("Error setting initial score:", e));
                 }
             }, (error) => {
-                // Log and display any errors during snapshot listening
                 console.error("Error listening to score changes:", error);
-                currentScoreElement.textContent = "خطأ";
+                displayError(`خطأ في جلب السكور: ${error.message}`);
             });
         }
 
@@ -158,52 +200,43 @@
         async function incrementScore() {
             if (!db || !userId) {
                 console.error("Firebase not initialized or user not authenticated.");
-                // Provide user feedback if not ready
-                currentScoreElement.textContent = "الرجاء الانتظار...";
+                displayError("الرجاء الانتظار حتى يتم تحميل التطبيق.");
                 return;
             }
 
-            // Define the document reference for the user's score
-            const userScoreDocRef = doc(db, `artifacts/${appId}/users/${userId}/scores`, 'user_score');
+            const userScoreDocRef = doc(db, `artifacts/${appId}/users/${userId}/scores`, 'user_score'); // Use global appId
 
             try {
-                // Get the current score from Firestore
                 const docSnap = await getDoc(userScoreDocRef);
                 let currentScore = 0;
                 if (docSnap.exists()) {
-                    currentScore = docSnap.data().score || 0; // Get existing score or default to 0
+                    currentScore = docSnap.data().score || 0;
                 }
-                const newScore = currentScore + 1; // Increment the score
-
-                // Save the new score back to Firestore
+                const newScore = currentScore + 1;
                 await setDoc(userScoreDocRef, { score: newScore });
                 console.log("Score incremented and saved:", newScore);
             } catch (error) {
                 console.error("Error incrementing score:", error);
-                // Display a user-friendly error message on the UI
-                currentScoreElement.textContent = "خطأ في الحفظ!";
+                displayError(`خطأ في زيادة السكور: ${error.message}`);
             }
         }
 
         // Add event listener to the increment button
         incrementButton.addEventListener('click', incrementScore);
+        incrementButton.disabled = true; // Disable button by default until Firebase is ready
 
         // Add event listener to the close button
         closeButton.addEventListener('click', () => {
-            // Check if Telegram Web App SDK is available and has the close function
             if (window.Telegram.WebApp && window.Telegram.WebApp.close) {
-                window.Telegram.WebApp.close(); // Close the mini app
+                window.Telegram.WebApp.close();
             } else {
                 console.log("Not running inside Telegram Web App. Cannot close.");
-                // Optionally, provide an in-app message for testing outside Telegram
-                // You could display a custom modal here instead of an alert
             }
         });
 
         // Initialize Firebase when the window has fully loaded
         window.onload = () => {
             initializeFirebase();
-            // Ensure Telegram Web App SDK is ready for interaction
             if (window.Telegram.WebApp) {
                 window.Telegram.WebApp.ready();
             }
