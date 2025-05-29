@@ -3,87 +3,33 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>4YOU BAC App</title>
+    <title>4YOU BAC</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
-        /* Custom styles for animations and font */
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
-
+        @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800;900&display=swap');
         body {
-            font-family: 'Inter', sans-serif;
-            background-color: #1a202c; /* Dark blue background */
-            color: #e2e8f0; /* Light text color */
-            overflow: hidden; /* Prevent scrolling on main body */
+            font-family: 'Cairo', sans-serif;
+            background-color: #0A192F; /* Dark blue background */
+            color: #E2E8F0; /* Light text color */
+            overflow: hidden; /* Prevent body scroll, manage scroll within specific divs */
         }
 
-        .app-container {
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-            background: linear-gradient(135deg, #1a202c 0%, #2c5282 100%); /* Subtle gradient */
-            position: relative;
-            overflow: hidden;
+        /* Custom scrollbar for content areas */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #1A202C;
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #4A5568;
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #718096;
         }
 
-        /* Onboarding modal specific styles */
-        .onboarding-modal {
-            background-color: rgba(0, 0, 0, 0.7);
-            backdrop-filter: blur(5px);
-            z-index: 1000;
-        }
-
-        .onboarding-card {
-            background-color: #2d3748; /* Slightly lighter dark blue for cards */
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
-            animation: fadeInScale 0.3s ease-out;
-        }
-
-        @keyframes fadeInScale {
-            from { opacity: 0; transform: scale(0.9); }
-            to { opacity: 1; transform: scale(1); }
-        }
-
-        /* Pulsating effect for study timer */
-        .pulsating-circle {
-            animation: pulse 1.5s infinite ease-in-out;
-        }
-
-        @keyframes pulse {
-            0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(100, 200, 255, 0.7); }
-            70% { transform: scale(1.05); box-shadow: 0 0 0 20px rgba(100, 200, 255, 0); }
-            100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(100, 200, 255, 0); }
-        }
-
-        /* Page transition animation */
-        .page {
-            display: none; /* Hidden by default */
-            animation: slideInFromRight 0.4s ease-out forwards;
-        }
-
-        .page.active {
-            display: flex; /* Show active page */
-        }
-
-        @keyframes slideInFromRight {
-            from { transform: translateX(100%); opacity: 0; }
-            to { transform: translateX(0); opacity: 1; }
-        }
-
-        /* Ranking modal */
-        .ranking-modal {
-            background-color: rgba(0, 0, 0, 0.7);
-            backdrop-filter: blur(5px);
-            z-index: 999;
-        }
-
-        .ranking-card {
-            background-color: #2d3748;
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
-        }
-
-        /* Subtle background animation */
         .background-animation {
             position: absolute;
             top: 0;
@@ -93,373 +39,767 @@
             overflow: hidden;
             z-index: -1;
         }
-
-        .background-animation::before {
-            content: '';
-            position: absolute;
-            width: 300px;
-            height: 300px;
-            background: rgba(66, 153, 225, 0.1); /* Blue-500 with transparency */
-            border-radius: 50%;
-            animation: float1 15s infinite ease-in-out;
-            top: 10%;
-            left: 5%;
-        }
-
+        .background-animation::before,
         .background-animation::after {
             content: '';
             position: absolute;
+            background: rgba(17, 25, 40, 0.5); /* Slightly lighter dark blue for effects */
+            border-radius: 50%;
+            animation: move-elements 20s infinite ease-in-out alternate;
+        }
+        .background-animation::before {
+            width: 300px;
+            height: 300px;
+            top: -50px;
+            left: -50px;
+            animation-delay: 0s;
+        }
+        .background-animation::after {
             width: 200px;
             height: 200px;
-            background: rgba(99, 179, 237, 0.15); /* Blue-400 with transparency */
+            bottom: -50px;
+            right: -50px;
+            animation-delay: 5s;
+        }
+
+        @keyframes move-elements {
+            0% { transform: translate(0, 0) scale(1); opacity: 0.7; }
+            25% { transform: translate(50px, 100px) scale(1.1); opacity: 0.8; }
+            50% { transform: translate(100px, 0) scale(1.2); opacity: 0.9; }
+            75% { transform: translate(50px, -100px) scale(1.1); opacity: 0.8; }
+            100% { transform: translate(0, 0) scale(1); opacity: 0.7; }
+        }
+
+        /* Splash screen styles */
+        #splash-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #0A192F, #1A202C); /* Gradient background */
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
+            opacity: 1;
+            transition: opacity 1s ease-out;
+        }
+        .splash-spinner {
+            border: 8px solid rgba(255, 255, 255, 0.3);
+            border-top: 8px solid #63B3ED; /* Light blue */
             border-radius: 50%;
-            animation: float2 20s infinite ease-in-out;
-            bottom: 15%;
-            right: 10%;
+            width: 60px;
+            height: 60px;
+            animation: spin 1s linear infinite;
+            margin-bottom: 2rem;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .splash-text {
+            font-size: 2.5rem;
+            font-weight: 800;
+            color: #63B3ED;
+            text-shadow: 0 0 15px rgba(99, 179, 237, 0.5);
         }
 
-        @keyframes float1 {
-            0% { transform: translate(0, 0); }
-            50% { transform: translate(20px, 30px); }
-            100% { transform: translate(0, 0); }
+        /* Onboarding specific styles */
+        .onboarding-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            backdrop-filter: blur(5px);
+            transition: opacity 0.3s ease-in-out;
+        }
+        .onboarding-card {
+            background: linear-gradient(145deg, #1A202C, #2D3748); /* Gradient for card */
+            border-radius: 1.5rem; /* More rounded corners */
+            padding: 2.5rem;
+            max-width: 90%;
+            width: 450px;
+            text-align: center;
+            box-shadow: 0 15px 30px rgba(0, 0, 0, 0.6);
+            animation: slide-up 0.6s ease-out;
+            border: 1px solid rgba(99, 179, 237, 0.3); /* Subtle border */
+        }
+        @keyframes slide-up {
+            from { transform: translateY(50px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        .onboarding-title {
+            font-size: 2.25rem; /* Larger title */
+            font-weight: 700;
+            color: #90CDF4; /* Lighter blue */
+            margin-bottom: 1.5rem;
+            text-shadow: 0 0 10px rgba(144, 205, 244, 0.3);
+        }
+        .onboarding-text {
+            font-size: 1.15rem;
+            line-height: 1.6;
+            color: #CBD5E0; /* Lighter gray */
+            margin-bottom: 2rem;
+        }
+        .onboarding-button {
+            background: linear-gradient(90deg, #4299E1, #63B3ED); /* Blue gradient */
+            color: white;
+            font-weight: bold;
+            padding: 0.8rem 2rem;
+            border-radius: 1.5rem; /* Pill shape */
+            box-shadow: 0 5px 15px rgba(66, 153, 225, 0.4);
+            transition: all 0.3s ease-in-out;
+            transform: scale(1);
+        }
+        .onboarding-button:hover {
+            transform: scale(1.05);
+            box-shadow: 0 8px 20px rgba(66, 153, 225, 0.6);
+        }
+        .onboarding-button.close-btn {
+            background: linear-gradient(90deg, #48BB78, #68D391); /* Green gradient for close */
+            box-shadow: 0 5px 15px rgba(72, 187, 120, 0.4);
+        }
+        .onboarding-button.close-btn:hover {
+            box-shadow: 0 8px 20px rgba(72, 187, 120, 0.6);
         }
 
-        @keyframes float2 {
-            0% { transform: translate(0, 0); }
-            50% { transform: translate(-30px, -20px); }
-            100% { transform: translate(0, 0); }
+
+        /* Main app navigation buttons */
+        .nav-button {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            flex: 1;
+            padding: 0.75rem 0;
+            color: #A0AEC0; /* Gray text */
+            transition: color 0.2s ease-in-out, background-color 0.2s ease-in-out;
+            border-radius: 0.75rem;
+        }
+        .nav-button.active {
+            color: #63B3ED; /* Light blue for active */
+            background-color: rgba(99, 179, 237, 0.1); /* Light blue tint */
+        }
+        .nav-button:hover {
+            color: #90CDF4; /* Lighter blue on hover */
+        }
+
+        /* Counter page specific styles */
+        .counter-timer-circle {
+            width: 220px; /* Slightly larger */
+            height: 220px;
+            border-radius: 50%;
+            background: #1A202C; /* Darker blue */
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+            box-shadow: 0 0 20px rgba(99, 179, 237, 0.3);
+            border: 3px solid #4A5568; /* Subtle border */
+        }
+        .counter-timer-circle.pulsing {
+            animation: pulse-effect 1.5s infinite ease-in-out;
+        }
+        @keyframes pulse-effect {
+            0% { box-shadow: 0 0 20px rgba(99, 179, 237, 0.3); transform: scale(1); }
+            50% { box-shadow: 0 0 40px rgba(99, 179, 237, 0.6); transform: scale(1.02); }
+            100% { box-shadow: 0 0 20px rgba(99, 179, 237, 0.3); transform: scale(1); }
+        }
+        .counter-score-display {
+            font-size: 2.5rem; /* Larger score */
+            font-weight: 800;
+            color: #48BB78; /* Vibrant green */
+            text-shadow: 0 0 10px rgba(72, 187, 120, 0.5);
+            margin-top: 0.5rem;
+        }
+
+        /* Ranking modal styles */
+        .ranking-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            backdrop-filter: blur(5px);
+            transition: opacity 0.3s ease-in-out;
+        }
+        .ranking-modal-content {
+            background: linear-gradient(145deg, #1A202C, #2D3748);
+            border-radius: 1.5rem;
+            padding: 2rem;
+            max-width: 90%;
+            width: 500px;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+            animation: slide-up 0.5s ease-out;
+            border: 1px solid rgba(99, 179, 237, 0.3);
+        }
+        .ranking-item {
+            display: flex;
+            align-items: center;
+            padding: 0.75rem;
+            background: #2D3748; /* Slightly lighter gray for list items */
+            border-radius: 0.75rem;
+            margin-bottom: 0.5rem;
+        }
+        .ranking-item:last-child {
+            margin-bottom: 0;
+        }
+        .ranking-item img {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            object-fit: cover;
+            margin-left: 1rem;
+        }
+        .top-ranker-img {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 3px solid #ECC94B; /* Gold border for top ranker */
+        }
+
+        /* Baccalaureate page styles */
+        .subject-button, .branch-button, .year-button {
+            background: #2D3748;
+            color: #CBD5E0;
+            padding: 0.75rem 1.25rem;
+            border-radius: 0.75rem;
+            transition: all 0.2s ease-in-out;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+        .subject-button:hover, .branch-button:hover, .year-button:hover {
+            background: #4A5568;
+            transform: translateY(-2px);
+        }
+        .subject-button.selected, .branch-button.selected {
+            background: linear-gradient(90deg, #4299E1, #63B3ED);
+            color: white;
+            box-shadow: 0 4px 10px rgba(66, 153, 225, 0.4);
+        }
+        .year-button.solved {
+            background: linear-gradient(90deg, #48BB78, #68D391); /* Green for solved */
+            color: white;
+            box-shadow: 0 4px 10px rgba(72, 187, 120, 0.4);
+        }
+
+        .completion-frame {
+            background: linear-gradient(145deg, #1A202C, #2D3748);
+            border-radius: 1.5rem;
+            padding: 1.5rem;
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.4);
+            border: 1px solid rgba(99, 179, 237, 0.3);
+        }
+        .progress-bar-container {
+            width: 100%;
+            background-color: #4A5568;
+            border-radius: 0.5rem;
+            overflow: hidden;
+            height: 20px;
+        }
+        .progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #63B3ED, #4299E1);
+            border-radius: 0.5rem;
+            transition: width 0.5s ease-in-out;
         }
     </style>
 </head>
-<body class="flex items-center justify-center min-h-screen">
-    <div class="app-container w-full max-w-md mx-auto rounded-xl shadow-2xl relative overflow-hidden">
-        <div class="background-animation"></div>
+<body class="flex flex-col h-screen">
+    <div id="splash-screen">
+        <div class="splash-spinner"></div>
+        <div class="splash-text">4YOU BAC</div>
+    </div>
 
-        <div id="onboarding-modal" class="onboarding-modal fixed inset-0 flex items-center justify-center p-4 hidden">
-            <div class="onboarding-card relative w-full max-w-sm p-6 rounded-lg text-center flex flex-col items-center">
-                <h2 id="onboarding-title" class="text-2xl font-bold mb-4 text-blue-300"></h2>
-                <p id="onboarding-description" class="text-gray-300 mb-6"></p>
-                <div class="flex justify-center space-x-4 w-full">
-                    <button id="onboarding-next-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-6 rounded-full transition duration-300 transform hover:scale-105 shadow-lg">
-                        التالي
-                    </button>
-                    <button id="onboarding-close-btn" class="bg-gray-600 hover:bg-gray-700 text-white font-semibold py-2 px-6 rounded-full transition duration-300 transform hover:scale-105 shadow-lg hidden">
-                        إغلاق
-                    </button>
-                </div>
-            </div>
-        </div>
+    <div class="background-animation"></div>
 
-        <div class="flex-grow w-full p-4 flex flex-col justify-center items-center">
-            <div id="home-page" class="page active flex-col items-center justify-center w-full h-full text-center">
-                <div class="flex items-center justify-center mb-6">
-                    <img id="user-avatar" src="https://placehold.co/100x100/4299e1/ffffff?text=User" alt="صورة المستخدم" class="w-24 h-24 rounded-full border-4 border-blue-400 shadow-lg">
-                    <p id="user-name" class="text-3xl font-bold ml-4 text-white">اسم المستخدم</p>
-                </div>
-                <div class="bg-blue-700 p-8 rounded-full mb-6 shadow-xl pulsating-circle">
-                    <p class="text-5xl font-extrabold text-white" id="user-score">0</p>
-                    <p class="text-lg text-blue-200">السكور الخاص بك</p>
-                </div>
-                <div class="flex flex-col space-y-4 w-full max-w-xs">
-                    <button id="general-ranking-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-full transition duration-300 transform hover:scale-105 shadow-lg">
-                        التصنيف العام
-                    </button>
-                    <button id="weekly-ranking-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-full transition duration-300 transform hover:scale-105 shadow-lg">
-                        التصنيف الأسبوعي
-                    </button>
-                </div>
-            </div>
-
-            <div id="study-page" class="page flex-col items-center justify-center w-full h-full text-center hidden">
-                <img src="https://placehold.co/200x200/2a4365/ffffff?text=STUDY" alt="صورة رمزية لشخص يدرس" class="w-48 h-48 rounded-full mb-8 border-4 border-blue-500 shadow-xl">
-                <div class="bg-blue-700 p-10 rounded-full mb-8 shadow-xl pulsating-circle">
-                    <p id="study-timer" class="text-6xl font-extrabold text-white mb-2">00:00:00</p>
-                    <p id="study-score" class="text-2xl text-blue-200">السكور: 0</p>
-                </div>
-                <button id="start-stop-btn" class="bg-green-500 hover:bg-green-600 text-white font-semibold py-4 px-12 rounded-full transition duration-300 transform hover:scale-105 shadow-lg text-2xl">
-                    البداية
+    <div id="onboarding-overlay" class="onboarding-overlay" style="display:none;">
+        <div id="onboarding-card" class="onboarding-card">
+            <h2 id="onboarding-title" class="onboarding-title"></h2>
+            <p id="onboarding-text" class="onboarding-text"></p>
+            <div class="flex justify-between mt-4">
+                <button id="onboarding-prev" class="onboarding-button" style="display:none;">
+                    السابق
                 </button>
-            </div>
-
-            <div id="unknown-page" class="page flex-col items-center justify-center w-full h-full text-center hidden">
-                <i class="fas fa-tools text-blue-400 text-9xl mb-8 animate-bounce"></i>
-                <h2 class="text-4xl font-bold text-white mb-4">الصفحة قيد التطوير</h2>
-                <p class="text-xl text-gray-300">نحن نعمل بجد لإضافة ميزات جديدة ومثيرة هنا. ترقبوا!</p>
-            </div>
-        </div>
-
-        <div id="ranking-modal" class="ranking-modal fixed inset-0 flex items-center justify-center p-4 hidden">
-            <div class="ranking-card relative w-full max-w-md p-6 rounded-lg text-center flex flex-col items-center">
-                <h2 id="ranking-modal-title" class="text-3xl font-bold mb-6 text-blue-300"></h2>
-                <div id="top-three-ranking" class="flex justify-around items-end w-full mb-8">
-                    <div class="flex flex-col items-center">
-                        <img src="https://placehold.co/80x80/63b3ed/ffffff?text=2" alt="Rank 2" class="w-20 h-20 rounded-full border-4 border-gray-400 mb-2 shadow-md">
-                        <p class="font-semibold text-gray-200">المركز الثاني</p>
-                        <p class="text-lg text-blue-200">اسم 2 (1800)</p>
-                    </div>
-                    <div class="flex flex-col items-center -mt-8">
-                        <img src="https://placehold.co/120x120/4299e1/ffffff?text=1" alt="Rank 1" class="w-32 h-32 rounded-full border-4 border-yellow-400 mb-2 shadow-lg">
-                        <p class="font-bold text-xl text-yellow-300">المركز الأول</p>
-                        <p class="text-xl text-blue-100">اسم 1 (2500)</p>
-                    </div>
-                    <div class="flex flex-col items-center">
-                        <img src="https://placehold.co/80x80/90cdf4/ffffff?text=3" alt="Rank 3" class="w-20 h-20 rounded-full border-4 border-orange-400 mb-2 shadow-md">
-                        <p class="font-semibold text-gray-200">المركز الثالث</p>
-                        <p class="text-lg text-blue-200">اسم 3 (1500)</p>
-                    </div>
-                </div>
-                <div id="other-rankings" class="w-full text-left max-h-60 overflow-y-auto pr-2">
-                    </div>
-                <button id="ranking-close-btn" class="mt-8 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-6 rounded-full transition duration-300 transform hover:scale-105 shadow-lg">
+                <button id="onboarding-next" class="onboarding-button">
+                    التالي
+                </button>
+                <button id="onboarding-close" class="onboarding-button close-btn" style="display:none;">
                     إغلاق
                 </button>
             </div>
         </div>
+    </div>
 
-        <div class="flex justify-around items-center w-full bg-blue-800 p-4 rounded-t-xl shadow-inner">
-            <button id="nav-study-btn" class="nav-btn flex flex-col items-center text-blue-200 hover:text-white transition duration-200">
-                <i class="fas fa-book text-2xl mb-1"></i>
-                <span class="text-sm">دراسة</span>
+    <div id="main-app" class="flex flex-col flex-grow w-full h-full" style="display:none;">
+        <header class="p-4 text-center text-3xl font-bold text-blue-400">
+            4YOU BAC
+        </header>
+
+        <main class="flex-grow p-4 overflow-y-auto flex justify-center items-start">
+            <div id="home-page" class="page flex flex-col items-center justify-start h-full w-full max-w-xl">
+                <div class="flex flex-col items-center mb-8 bg-gray-800 p-6 rounded-2xl shadow-xl w-full">
+                    <img id="user-profile-pic" src="https://placehold.co/100x100/0A192F/E2E8F0?text=صورة" alt="صورة المستخدم" class="w-28 h-28 rounded-full border-4 border-blue-500 mb-4 object-cover">
+                    <div class="text-center">
+                        <h1 id="user-name" class="text-3xl font-bold text-blue-300 mb-1">اسم المستخدم</h1>
+                        <p class="text-gray-400 text-lg">مرحباً بك في 4YOU BAC!</p>
+                        <p class="text-gray-500 text-sm mt-1">معرف المستخدم: <span id="user-id-display">...</span></p>
+                    </div>
+                </div>
+
+                <div class="bg-gray-800 p-8 rounded-2xl shadow-xl text-center mb-8 w-full">
+                    <h2 class="text-xl font-semibold text-gray-300 mb-2">السكور الخاص بك</h2>
+                    <p id="user-score" class="text-7xl font-extrabold text-green-400 mb-4 animate-bounce">0</p>
+                </div>
+
+                <div class="flex flex-col md:flex-row justify-around w-full max-w-2xl">
+                    <div id="general-ranking-card" class="bg-gray-800 p-6 rounded-2xl shadow-xl text-center mb-4 md:mb-0 md:w-1/2 mx-2 cursor-pointer transform transition duration-300 hover:scale-105 hover:bg-gray-700">
+                        <h2 class="text-xl font-semibold text-gray-300 mb-2">التصنيف العام</h2>
+                        <p id="general-rank" class="text-4xl font-bold text-yellow-400">#N/A</p>
+                    </div>
+                    <div id="weekly-ranking-card" class="bg-gray-800 p-6 rounded-2xl shadow-xl text-center md:w-1/2 mx-2 cursor-pointer transform transition duration-300 hover:scale-105 hover:bg-gray-700">
+                        <h2 class="text-xl font-semibold text-gray-300 mb-2">التصنيف الأسبوعي</h2>
+                        <p id="weekly-rank" class="text-4xl font-bold text-purple-400">#N/A</p>
+                    </div>
+                </div>
+            </div>
+
+            <div id="counter-page" class="page flex flex-col items-center justify-start h-full hidden">
+                <div class="relative w-full max-w-md mb-8">
+                    <img src="https://placehold.co/600x300/0A192F/63B3ED?text=شخص+يدرس+بجد" alt="شخص يدرس بجد" class="w-full h-auto rounded-2xl shadow-xl object-cover">
+                    <div class="absolute inset-0 bg-gradient-to-t from-blue-900 via-transparent to-transparent opacity-70 rounded-2xl"></div>
+                </div>
+
+                <div id="counter-timer-container" class="counter-timer-circle mb-8">
+                    <p id="counter-time" class="text-5xl font-extrabold text-blue-300 mb-2">00:00:00</p>
+                    <p id="counter-score" class="counter-score-display">0</p>
+                </div>
+
+                <button id="start-stop-button" class="bg-gradient-to-r from-blue-500 to-blue-700 hover:from-blue-600 hover:to-blue-800 text-white font-bold py-3 px-8 rounded-full shadow-lg transition duration-300 transform hover:scale-105 focus:outline-none focus:ring-4 focus:ring-blue-300 focus:ring-opacity-75">
+                    البداية
+                </button>
+            </div>
+
+            <div id="baccalaureate-page" class="page flex flex-col items-center justify-start h-full hidden w-full max-w-2xl">
+                <h2 class="text-4xl font-bold text-blue-300 mb-8">بكالوريات</h2>
+
+                <div id="bac-subject-selection" class="w-full">
+                    <div class="grid grid-cols-2 md:grid-cols-3 gap-4 mb-8">
+                        </div>
+                    <button id="bac-continue-subjects" class="w-full bg-gradient-to-r from-green-500 to-green-700 hover:from-green-600 hover:to-green-800 text-white font-bold py-3 px-8 rounded-xl shadow-lg transition duration-300 transform hover:scale-105">
+                        المتابعة
+                    </button>
+                </div>
+
+                <div id="bac-details-selection" class="w-full hidden">
+                    <div class="bg-gray-800 p-6 rounded-2xl shadow-xl mb-6 w-full">
+                        <h3 class="text-xl font-semibold text-gray-300 mb-4">المواد المختارة:</h3>
+                        <div id="selected-subjects-display" class="flex flex-wrap gap-2 mb-4">
+                            </div>
+                        <button id="bac-edit-subjects" class="bg-yellow-600 hover:bg-yellow-700 text-white font-bold py-2 px-4 rounded-xl shadow-lg transition duration-300 transform hover:scale-105">
+                            تعديل المواد
+                        </button>
+                    </div>
+
+                    <div class="completion-frame w-full mb-6">
+                        <h3 class="text-xl font-semibold text-gray-300 mb-4 text-center">نسبة إكمال المواضيع الكلية</h3>
+                        <div class="progress-bar-container">
+                            <div id="overall-completion-bar" class="progress-bar" style="width: 0%;"></div>
+                        </div>
+                        <p id="overall-completion-text" class="text-center text-blue-300 font-bold mt-2">0% مكتمل</p>
+                    </div>
+
+                    <div id="bac-material-details" class="w-full">
+                        </div>
+                </div>
+            </div>
+        </main>
+
+        <footer class="w-full bg-gray-900 border-t border-gray-700 flex justify-around p-2 shadow-inner">
+            <button id="nav-home" class="nav-button active">
+                <svg class="w-7 h-7 mb-1" fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"></path>
+                </svg>
+                <span class="text-xs">الرئيسية</span>
             </button>
-            <button id="nav-home-btn" class="nav-btn flex flex-col items-center text-white transition duration-200">
-                <i class="fas fa-home text-3xl mb-1"></i>
-                <span class="text-sm">الرئيسية</span>
+            <button id="nav-counter" class="nav-button">
+                <svg class="w-7 h-7 mb-1" fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M12 4.5C7.5 4.5 4 8 4 12.5S7.5 20.5 12 20.5 20 17 20 12.5 16.5 4.5 12 4.5zm0 14c-3.03 0-5.5-2.47-5.5-5.5s2.47-5.5 5.5-5.5 5.5 2.47 5.5 5.5-2.47 5.5-5.5 5.5zM11 9h2v4h-2zm0 5h2v2h-2z"></path>
+                </svg>
+                <span class="text-xs">العداد</span>
             </button>
-            <button id="nav-unknown-btn" class="nav-btn flex flex-col items-center text-blue-200 hover:text-white transition duration-200">
-                <i class="fas fa-question-circle text-2xl mb-1"></i>
-                <span class="text-sm">مجهول</span>
+            <button id="nav-baccalaureate" class="nav-button">
+                <svg class="w-7 h-7 mb-1" fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"></path>
+                </svg>
+                <span class="text-xs">بكالوريات</span>
+            </button>
+        </footer>
+    </div>
+
+    <div id="ranking-modal" class="ranking-modal" style="display:none;">
+        <div class="ranking-modal-content">
+            <h2 id="ranking-modal-title" class="text-3xl font-bold text-blue-300 mb-6 text-center"></h2>
+            <div id="top-rankers" class="flex justify-center items-end mb-8">
+                </div>
+            <div id="other-rankings" class="flex flex-col gap-3 mb-6">
+                </div>
+            <div id="user-own-rank" class="bg-blue-900 p-4 rounded-xl shadow-inner text-center text-lg font-semibold text-blue-200" style="display:none;">
+                </div>
+            <button id="ranking-modal-close" class="mt-8 w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-6 rounded-xl shadow-lg transition duration-300 transform hover:scale-105">
+                إغلاق
             </button>
         </div>
     </div>
 
     <script>
-        // Check if the user has completed onboarding
-        const hasOnboarded = localStorage.getItem('onboarded');
-        const onboardingModal = document.getElementById('onboarding-modal');
+        // Check if the Telegram Web App object is available
+        const isTelegramWebApp = typeof window.Telegram !== 'undefined' && window.Telegram.WebApp;
+
+        // --- Global Elements ---
+        const splashScreen = document.getElementById('splash-screen');
+        const onboardingOverlay = document.getElementById('onboarding-overlay');
+        const mainApp = document.getElementById('main-app');
+
+        // --- Splash Screen Logic ---
+        function showSplashScreen() {
+            splashScreen.style.display = 'flex';
+            setTimeout(() => {
+                splashScreen.style.opacity = '0';
+                setTimeout(() => {
+                    splashScreen.style.display = 'none';
+                    checkOnboardingStatus(); // Proceed to onboarding or main app
+                }, 1000); // Wait for fade out
+            }, 2000); // Display splash for 2 seconds
+        }
+
+        // --- Onboarding Logic ---
+        const onboardingCard = document.getElementById('onboarding-card');
         const onboardingTitle = document.getElementById('onboarding-title');
-        const onboardingDescription = document.getElementById('onboarding-description');
-        const onboardingNextBtn = document.getElementById('onboarding-next-btn');
-        const onboardingCloseBtn = document.getElementById('onboarding-close-btn');
+        const onboardingText = document.getElementById('onboarding-text');
+        const onboardingPrevBtn = document.getElementById('onboarding-prev');
+        const onboardingNextBtn = document.getElementById('onboarding-next');
+        const onboardingCloseBtn = document.getElementById('onboarding-close');
 
-        const pages = document.querySelectorAll('.page');
-        const navHomeBtn = document.getElementById('nav-home-btn');
-        const navStudyBtn = document.getElementById('nav-study-btn');
-        const navUnknownBtn = document.getElementById('nav-unknown-btn');
-
-        const userScoreDisplay = document.getElementById('user-score');
-        const generalRankingBtn = document.getElementById('general-ranking-btn');
-        const weeklyRankingBtn = document.getElementById('weekly-ranking-btn');
-        const rankingModal = document.getElementById('ranking-modal');
-        const rankingModalTitle = document.getElementById('ranking-modal-title');
-        const topThreeRanking = document.getElementById('top-three-ranking');
-        const otherRankings = document.getElementById('other-rankings');
-        const rankingCloseBtn = document.getElementById('ranking-close-btn');
-
-        const studyTimerDisplay = document.getElementById('study-timer');
-        const studyScoreDisplay = document.getElementById('study-score');
-        const startStopBtn = document.getElementById('start-stop-btn');
-
-        let currentOnboardingStep = 0;
         const onboardingContent = [
             {
-                title: 'حساب ترتيبك وتحفيزك',
-                description: 'سيتم حساب ترتيبك بناءً على أدائك، مما يحفزك للتقدم أكثر وتحقيق الأفضل. تنافس مع أصدقائك!'
+                title: "حساب ترتيبك وتحفيزك",
+                text: "سيتم حساب ترتيبك بناءً على أدائك، مما يحفزك للتقدم أكثر وتحقيق أفضل النتائج!"
             },
             {
-                title: 'ميزات جديدة قريبًا',
-                description: 'نحن نعمل باستمرار على إضافة ميزات جديدة ومثيرة لتحسين تجربتك. ترقبوا المزيد من التحديثات الرائعة قريبًا!'
+                title: "ميزات جديدة قريبًا",
+                text: "نعمل باستمرار على إضافة ميزات جديدة ومثيرة لتجربة أفضل. ترقبوا التحديثات القادمة!"
             },
             {
-                title: 'الشفافية وتحذير من الغش',
-                description: 'تطبيقنا يركز على الشفافية والعدالة. لا نسمح بأي شكل من أشكال الغش لضمان بيئة تنافسية نزيهة للجميع.'
+                title: "الشفافية وتحذير من الغش",
+                text: "تطبيقنا يركز على الشفافية والعدالة. لا توجد طرق للغش، والجميع يتنافس بشرف."
             },
             {
-                title: 'مجموعة 4YOU BAC',
-                description: 'هذا التطبيق هو جزء من مجموعة "4YOU BAC" المخصصة لمساعدتك في رحلتك التعليمية، من عمل "Askeladd".'
+                title: "مجموعة 4YOU BAC",
+                text: "هذا التطبيق هو جزء من عائلة '4YOU BAC' من عمل 'Askeladd'. نتمنى لكم تجربة موفقة!"
             }
         ];
+        let currentOnboardingStep = 0;
 
-        let timerInterval;
-        let startTime;
-        let elapsedTime = 0;
-        let isRunning = false;
-        let studyScore = 0;
-        let userOverallScore = 0; // Dummy user score
+        function showOnboardingStep(step) {
+            onboardingTitle.textContent = onboardingContent[step].title;
+            onboardingText.textContent = onboardingContent[step].text;
 
-        // Dummy ranking data
-        const generalRankings = [
-            { name: 'اسم 1', score: 2500, avatar: 'https://placehold.co/120x120/4299e1/ffffff?text=1' },
-            { name: 'اسم 2', score: 1800, avatar: 'https://placehold.co/80x80/63b3ed/ffffff?text=2' },
-            { name: 'اسم 3', score: 1500, avatar: 'https://placehold.co/80x80/90cdf4/ffffff?text=3' },
-            { name: 'اسم 4', score: 1200, avatar: 'https://placehold.co/50x50/a0aec0/ffffff?text=4' },
-            { name: 'اسم 5', score: 1100, avatar: 'https://placehold.co/50x50/a0aec0/ffffff?text=5' },
-            { name: 'اسم 6', score: 1000, avatar: 'https://placehold.co/50x50/a0aec0/ffffff?text=6' },
-            { name: 'اسم 7', score: 950, avatar: 'https://placehold.co/50x50/a0aec0/ffffff?text=7' },
-            { name: 'اسم 8', score: 900, avatar: 'https://placehold.co/50x50/a0aec0/ffffff?text=8' },
-            { name: 'اسم 9', score: 850, avatar: 'https://placehold.co/50x50/a0aec0/ffffff?text=9' },
-            { name: 'اسم 10', score: 800, avatar: 'https://placehold.co/50x50/a0aec0/ffffff?text=10' },
-            { name: 'اسم المستخدم', score: userOverallScore, avatar: 'https://placehold.co/50x50/4299e1/ffffff?text=User' } // User's own rank
-        ].sort((a, b) => b.score - a.score); // Sort by score descending
+            onboardingPrevBtn.style.display = (step > 0) ? 'inline-block' : 'none';
+            onboardingNextBtn.style.display = (step < onboardingContent.length - 1) ? 'inline-block' : 'none';
+            onboardingCloseBtn.style.display = (step === onboardingContent.length - 1) ? 'inline-block' : 'none';
+        }
 
-        const weeklyRankings = [
-            { name: 'اسم أ', score: 700, avatar: 'https://placehold.co/120x120/4299e1/ffffff?text=A' },
-            { name: 'اسم ب', score: 650, avatar: 'https://placehold.co/80x80/63b3ed/ffffff?text=B' },
-            { name: 'اسم ج', score: 600, avatar: 'https://placehold.co/80x80/90cdf4/ffffff?text=C' },
-            { name: 'اسم د', score: 550, avatar: 'https://placehold.co/50x50/a0aec0/ffffff?text=D' },
-            { name: 'اسم هـ', score: 500, avatar: 'https://placehold.co/50x50/a0aec0/ffffff?text=E' },
-            { name: 'اسم و', score: 450, avatar: 'https://placehold.co/50x50/a0aec0/ffffff?text=F' },
-            { name: 'اسم ز', score: 400, avatar: 'https://placehold.co/50x50/a0aec0/ffffff?text=G' },
-            { name: 'اسم المستخدم', score: studyScore, avatar: 'https://placehold.co/50x50/4299e1/ffffff?text=User' } // User's own rank
-        ].sort((a, b) => b.score - a.score); // Sort by score descending
+        function closeOnboarding() {
+            onboardingOverlay.style.opacity = '0';
+            setTimeout(() => {
+                onboardingOverlay.style.display = 'none';
+                mainApp.style.display = 'flex';
+                localStorage.setItem('seenOnboarding', 'true');
+            }, 300);
+        }
 
-        /**
-         * Hides all pages and sets the active class on the specified page.
-         * @param {HTMLElement} pageToShow - The page element to make active.
-         */
+        onboardingPrevBtn.addEventListener('click', () => {
+            if (currentOnboardingStep > 0) {
+                currentOnboardingStep--;
+                showOnboardingStep(currentOnboardingStep);
+            }
+        });
+
+        onboardingNextBtn.addEventListener('click', () => {
+            if (currentOnboardingStep < onboardingContent.length - 1) {
+                currentOnboardingStep++;
+                showOnboardingStep(currentOnboardingStep);
+            }
+        });
+
+        onboardingCloseBtn.addEventListener('click', closeOnboarding);
+
+        function checkOnboardingStatus() {
+            if (localStorage.getItem('seenOnboarding') === 'true') {
+                mainApp.style.display = 'flex';
+            } else {
+                onboardingOverlay.style.display = 'flex';
+                showOnboardingStep(currentOnboardingStep);
+            }
+        }
+
+        // --- Initial Load ---
+        window.onload = () => {
+            showSplashScreen(); // Start with the splash screen
+
+            // Initialize Telegram Web App if available
+            if (isTelegramWebApp) {
+                window.Telegram.WebApp.ready();
+                window.Telegram.WebApp.setBackgroundColor('#0A192F');
+                window.Telegram.WebApp.expand();
+
+                const userData = window.Telegram.WebApp.initDataUnsafe.user;
+                if (userData) {
+                    document.getElementById('user-name').textContent = userData.first_name + (userData.last_name ? ' ' + userData.last_name : '');
+                    document.getElementById('user-profile-pic').src = `https://placehold.co/100x100/0A192F/E2E8F0?text=${userData.first_name.charAt(0)}`;
+                    document.getElementById('user-id-display').textContent = userData.id;
+                }
+            } else {
+                document.getElementById('user-name').textContent = 'زائر';
+                document.getElementById('user-profile-pic').src = 'https://placehold.co/100x100/0A192F/E2E8F0?text=زائر';
+                document.getElementById('user-id-display').textContent = 'غير متوفر';
+            }
+        };
+
+
+        // --- Navigation Logic ---
+        const homePage = document.getElementById('home-page');
+        const counterPage = document.getElementById('counter-page');
+        const baccalaureatePage = document.getElementById('baccalaureate-page');
+
+        const navHomeBtn = document.getElementById('nav-home');
+        const navCounterBtn = document.getElementById('nav-counter');
+        const navBaccalaureateBtn = document.getElementById('nav-baccalaureate');
+
+        const pages = [homePage, counterPage, baccalaureatePage];
+        const navButtons = [navHomeBtn, navCounterBtn, navBaccalaureateBtn];
+
         function showPage(pageToShow) {
             pages.forEach(page => {
-                page.classList.remove('active');
-                page.classList.add('hidden');
+                page.style.display = 'none';
             });
-            pageToShow.classList.remove('hidden');
-            pageToShow.classList.add('active');
-
-            // Update navigation button active state
-            document.querySelectorAll('.nav-btn').forEach(btn => {
-                btn.classList.remove('text-white');
-                btn.classList.add('text-blue-200');
+            navButtons.forEach(button => {
+                button.classList.remove('active');
             });
-            if (pageToShow.id === 'home-page') {
-                navHomeBtn.classList.remove('text-blue-200');
-                navHomeBtn.classList.add('text-white');
-            } else if (pageToShow.id === 'study-page') {
-                navStudyBtn.classList.remove('text-blue-200');
-                navStudyBtn.classList.add('text-white');
-            } else if (pageToShow.id === 'unknown-page') {
-                navUnknownBtn.classList.remove('text-blue-200');
-                navUnknownBtn.classList.add('text-white');
+
+            pageToShow.style.display = 'flex';
+            const activeButton = navButtons[pages.indexOf(pageToShow)];
+            if (activeButton) {
+                activeButton.classList.add('active');
             }
         }
 
-        /**
-         * Displays the current onboarding step content.
-         */
-        function displayOnboardingStep() {
-            const content = onboardingContent[currentOnboardingStep];
-            onboardingTitle.textContent = content.title;
-            onboardingDescription.textContent = content.description;
+        navHomeBtn.addEventListener('click', () => showPage(homePage));
+        navCounterBtn.addEventListener('click', () => showPage(counterPage));
+        navBaccalaureateBtn.addEventListener('click', () => showPage(baccalaureatePage));
 
-            if (currentOnboardingStep === onboardingContent.length - 1) {
-                onboardingNextBtn.classList.add('hidden');
-                onboardingCloseBtn.classList.remove('hidden');
-            } else {
-                onboardingNextBtn.classList.remove('hidden');
-                onboardingCloseBtn.classList.add('hidden');
+        // --- Home Page Data (Dummy Data) ---
+        const userScoreElement = document.getElementById('user-score');
+        const generalRankElement = document.getElementById('general-rank');
+        const weeklyRankElement = document.getElementById('weekly-rank');
+
+        // Dummy user score and ranks
+        let userCurrentScore = 1250; // This would be fetched from a backend
+        let userGeneralRank = 15;
+        let userWeeklyRank = 7;
+
+        userScoreElement.textContent = userCurrentScore;
+        generalRankElement.textContent = `#${userGeneralRank}`;
+        weeklyRankElement.textContent = `#${userWeeklyRank}`;
+
+        // Dummy ranking data
+        const dummyGeneralRankings = [
+            { id: 1, name: 'أحمد سعيد', score: 2500, img: 'https://placehold.co/50x50/3182CE/FFFFFF?text=AS' },
+            { id: 2, name: 'فاطمة محمد', score: 2300, img: 'https://placehold.co/50x50/F6AD55/FFFFFF?text=FM' },
+            { id: 3, name: 'علياء خالد', score: 2100, img: 'https://placehold.co/50x50/48BB78/FFFFFF?text=AK' },
+            { id: 4, name: 'يوسف ناصر', score: 1900, img: 'https://placehold.co/50x50/9F7AEA/FFFFFF?text=YN' },
+            { id: 5, name: 'مريم حسين', score: 1850, img: 'https://placehold.co/50x50/ED8936/FFFFFF?text=MH' },
+            { id: 6, name: 'خالد فهد', score: 1700, img: 'https://placehold.co/50x50/667EEA/FFFFFF?text=KF' },
+            { id: 7, name: 'سارة عبد الله', score: 1650, img: 'https://placehold.co/50x50/4299E1/FFFFFF?text=SA' },
+            { id: 8, name: 'نور الدين', score: 1600, img: 'https://placehold.co/50x50/A0AEC0/FFFFFF?text=ND' },
+            { id: 9, name: 'ليلى جمال', score: 1550, img: 'https://placehold.co/50x50/F6E05E/FFFFFF?text=LG' },
+            { id: 10, name: 'عمران قاسم', score: 1500, img: 'https://placehold.co/50x50/E53E3E/FFFFFF?text=OQ' },
+            { id: 11, name: 'زينب عادل', score: 1400, img: 'https://placehold.co/50x50/38B2AC/FFFFFF?text=ZA' },
+            { id: 12, name: 'فارس محمود', score: 1350, img: 'https://placehold.co/50x50/805AD5/FFFFFF?text=FM' },
+            { id: 13, name: 'جنى كرم', score: 1300, img: 'https://placehold.co/50x50/D53F8C/FFFFFF?text=JK' },
+            { id: 14, name: 'أنس وليد', score: 1280, img: 'https://placehold.co/50x50/2D3748/FFFFFF?text=AW' },
+            { id: 15, name: 'أنت', score: userCurrentScore, img: document.getElementById('user-profile-pic').src, isUser: true } // User's own entry
+        ].sort((a, b) => b.score - a.score); // Sort by score descending
+
+        const dummyWeeklyRankings = [
+            { id: 1, name: 'أحمد سعيد', score: 500, img: 'https://placehold.co/50x50/3182CE/FFFFFF?text=AS' },
+            { id: 2, name: 'علياء خالد', score: 450, img: 'https://placehold.co/50x50/48BB78/FFFFFF?text=AK' },
+            { id: 3, name: 'فاطمة محمد', score: 400, img: 'https://placehold.co/50x50/F6AD55/FFFFFF?text=FM' },
+            { id: 4, name: 'مريم حسين', score: 380, img: 'https://placehold.co/50x50/ED8936/FFFFFF?text=MH' },
+            { id: 5, name: 'يوسف ناصر', score: 350, img: 'https://placehold.co/50x50/9F7AEA/FFFFFF?text=YN' },
+            { id: 6, name: 'سارة عبد الله', score: 320, img: 'https://placehold.co/50x50/4299E1/FFFFFF?text=SA' },
+            { id: 7, name: 'أنت', score: userCurrentScore / 5, img: document.getElementById('user-profile-pic').src, isUser: true }, // User's own entry for weekly
+            { id: 8, name: 'خالد فهد', score: 300, img: 'https://placehold.co/50x50/667EEA/FFFFFF?text=KF' },
+            { id: 9, name: 'نور الدين', score: 280, img: 'https://placehold.co/50x50/A0AEC0/FFFFFF?text=ND' },
+            { id: 10, name: 'ليلى جمال', score: 250, img: 'https://placehold.co/50x50/F6E05E/FFFFFF?text=LG' }
+        ].sort((a, b) => b.score - a.score); // Sort by score descending
+
+
+        // --- Ranking Modal Logic ---
+        const rankingModal = document.getElementById('ranking-modal');
+        const rankingModalTitle = document.getElementById('ranking-modal-title');
+        const topRankersContainer = document.getElementById('top-rankers');
+        const otherRankingsContainer = document.getElementById('other-rankings');
+        const userOwnRankContainer = document.getElementById('user-own-rank');
+        const rankingModalCloseBtn = document.getElementById('ranking-modal-close');
+
+        function showRankingModal(type) {
+            let rankingsData;
+            let title;
+            let userRankValue;
+
+            if (type === 'general') {
+                rankingsData = dummyGeneralRankings;
+                title = "التصنيف العام";
+                userRankValue = userGeneralRank;
+            } else { // weekly
+                rankingsData = dummyWeeklyRankings;
+                title = "التصنيف الأسبوعي";
+                userRankValue = userWeeklyRank;
             }
+
+            rankingModalTitle.textContent = title;
+            topRankersContainer.innerHTML = '';
+            otherRankingsContainer.innerHTML = '';
+            userOwnRankContainer.style.display = 'none';
+
+            // Display Top 3
+            rankingsData.slice(0, 3).forEach((ranker, index) => {
+                const rankerDiv = document.createElement('div');
+                rankerDiv.className = `flex flex-col items-center mx-2 ${index === 0 ? 'order-2' : (index === 1 ? 'order-1' : 'order-3')}`; // Order for 2-1-3 layout
+                rankerDiv.innerHTML = `
+                    <img src="${ranker.img}" alt="${ranker.name}" class="top-ranker-img ${index === 0 ? 'w-24 h-24 border-yellow-400' : 'w-20 h-20 border-gray-500'} mb-2 transform transition duration-300 hover:scale-110">
+                    <p class="text-xl font-bold text-gray-200">${ranker.name}</p>
+                    <p class="text-md text-gray-400">السكور: ${ranker.score}</p>
+                    <p class="text-3xl font-extrabold ${index === 0 ? 'text-yellow-300' : (index === 1 ? 'text-gray-400' : 'text-amber-600')}">#${index + 1}</p>
+                `;
+                topRankersContainer.appendChild(rankerDiv);
+            });
+
+            // Display other rankings up to 10
+            rankingsData.slice(3, 10).forEach((ranker, index) => {
+                const rankItem = document.createElement('div');
+                rankItem.className = 'ranking-item';
+                rankItem.innerHTML = `
+                    <span class="font-bold text-lg text-blue-300 w-8 text-center">#${index + 4}</span>
+                    <img src="${ranker.img}" alt="${ranker.name}" class="w-10 h-10 rounded-full object-cover ml-4">
+                    <span class="flex-grow text-gray-200">${ranker.name}</span>
+                    <span class="text-gray-400">السكور: ${ranker.score}</span>
+                `;
+                otherRankingsContainer.appendChild(rankItem);
+            });
+
+            // Display user's own rank if outside top 10
+            if (userRankValue > 10) {
+                userOwnRankContainer.style.display = 'block';
+                userOwnRankContainer.innerHTML = `
+                    <p>ترتيبك: <span class="text-blue-300 font-bold">#${userRankValue}</span></p>
+                    <p>السكور الخاص بك: <span class="text-green-300 font-bold">${userCurrentScore}</span></p>
+                `;
+            }
+
+            rankingModal.style.display = 'flex';
+            setTimeout(() => rankingModal.style.opacity = '1', 10); // Fade in
         }
 
-        /**
-         * Initializes the onboarding process or skips to home if already onboarded.
-         */
-        function initializeApp() {
-            if (!hasOnboarded) {
-                onboardingModal.classList.remove('hidden');
-                displayOnboardingStep();
-            } else {
-                showPage(document.getElementById('home-page'));
-            }
-            // Initialize dummy user score
-            userOverallScore = parseInt(localStorage.getItem('userOverallScore') || '0');
-            userScoreDisplay.textContent = userOverallScore;
+        function closeRankingModal() {
+            rankingModal.style.opacity = '0';
+            setTimeout(() => rankingModal.style.display = 'none', 300); // Fade out
         }
 
-        /**
-         * Handles the "Next" button click for onboarding.
-         */
-        onboardingNextBtn.addEventListener('click', () => {
-            currentOnboardingStep++;
-            if (currentOnboardingStep < onboardingContent.length) {
-                displayOnboardingStep();
-            }
-        });
+        document.getElementById('general-ranking-card').addEventListener('click', () => showRankingModal('general'));
+        document.getElementById('weekly-ranking-card').addEventListener('click', () => showRankingModal('weekly'));
+        rankingModalCloseBtn.addEventListener('click', closeRankingModal);
 
-        /**
-         * Handles the "Close" button click for onboarding.
-         */
-        onboardingCloseBtn.addEventListener('click', () => {
-            localStorage.setItem('onboarded', 'true');
-            onboardingModal.classList.add('hidden');
-            showPage(document.getElementById('home-page'));
-        });
 
-        // Navigation button event listeners
-        navHomeBtn.addEventListener('click', () => showPage(document.getElementById('home-page')));
-        navStudyBtn.addEventListener('click', () => showPage(document.getElementById('study-page')));
-        navUnknownBtn.addEventListener('click', () => showPage(document.getElementById('unknown-page')));
+        // --- Counter Page Timer Logic ---
+        const counterTimeElement = document.getElementById('counter-time');
+        const counterScoreElement = document.getElementById('counter-score');
+        const startStopButton = document.getElementById('start-stop-button');
+        const counterTimerCircle = document.getElementById('counter-timer-container');
 
-        /**
-         * Formats time in HH:MM:SS.
-         * @param {number} seconds - Total seconds.
-         * @returns {string} Formatted time string.
-         */
-        function formatTime(seconds) {
-            const h = String(Math.floor(seconds / 3600)).padStart(2, '0');
-            const m = String(Math.floor((seconds % 3600) / 60)).padStart(2, '0');
-            const s = String(seconds % 60).padStart(2, '0');
+        let timerInterval;
+        let isRunning = false;
+        let seconds = 0;
+        let counterScore = 0;
+
+        function formatTime(totalSeconds) {
+            const h = String(Math.floor(totalSeconds / 3600)).padStart(2, '0');
+            const m = String(Math.floor((totalSeconds % 3600) / 60)).padStart(2, '0');
+            const s = String(totalSeconds % 60).padStart(2, '0');
             return `${h}:${m}:${s}`;
         }
 
-        /**
-         * Updates the study timer and score.
-         */
         function updateTimer() {
-            const now = Date.now();
-            elapsedTime += (now - startTime) / 1000; // Add elapsed time in seconds
-            startTime = now; // Reset start time for next interval
-
-            studyTimerDisplay.textContent = formatTime(Math.floor(elapsedTime));
-            // Update score based on time (e.g., 1 point per 10 seconds)
-            studyScore = Math.floor(elapsedTime / 10);
-            studyScoreDisplay.textContent = `السكور: ${studyScore}`;
+            seconds++;
+            counterTimeElement.textContent = formatTime(seconds);
+            // Example scoring: 1 point every 10 seconds
+            if (seconds % 10 === 0) {
+                counterScore += 1;
+                counterScoreElement.textContent = counterScore; // No prefix
+            }
         }
 
-        /**
-         * Starts the study timer.
-         */
         function startTimer() {
             if (!isRunning) {
                 isRunning = true;
-                startTime = Date.now();
-                timerInterval = setInterval(updateTimer, 1000); // Update every second
-                startStopBtn.textContent = 'إيقاف';
-                startStopBtn.classList.remove('bg-green-500', 'hover:bg-green-600');
-                startStopBtn.classList.add('bg-red-500', 'hover:bg-red-600');
+                startStopButton.textContent = 'إيقاف';
+                startStopButton.classList.remove('from-blue-500', 'to-blue-700');
+                startStopButton.classList.add('from-red-500', 'to-red-700');
+                counterTimerCircle.classList.add('pulsing');
+                timerInterval = setInterval(updateTimer, 1000);
             }
         }
 
-        /**
-         * Stops the study timer.
-         */
         function stopTimer() {
             if (isRunning) {
                 isRunning = false;
+                startStopButton.textContent = 'البداية';
+                startStopButton.classList.remove('from-red-500', 'to-red-700');
+                startStopButton.classList.add('from-blue-500', 'to-blue-700');
+                counterTimerCircle.classList.remove('pulsing');
                 clearInterval(timerInterval);
-                timerInterval = null;
-                startStopBtn.textContent = 'البداية';
-                startStopBtn.classList.remove('bg-red-500', 'hover:bg-red-600');
-                startStopBtn.classList.add('bg-green-500', 'hover:bg-green-600');
-
-                // Update overall user score
-                userOverallScore += studyScore;
-                localStorage.setItem('userOverallScore', userOverallScore);
-                userScoreDisplay.textContent = userOverallScore;
+                // Optionally, save counterScore to userCurrentScore and update rankings here
+                userCurrentScore += counterScore;
+                userScoreElement.textContent = userCurrentScore;
+                counterScore = 0; // Reset for next session
+                counterScoreElement.textContent = counterScore;
             }
         }
 
-        /**
-         * Toggles the study timer.
-         */
-        startStopBtn.addEventListener('click', () => {
+        startStopButton.addEventListener('click', () => {
             if (isRunning) {
                 stopTimer();
             } else {
@@ -467,132 +807,191 @@
             }
         });
 
-        // Smart counting: Pause when window loses focus, resume when gains focus
-        window.addEventListener('blur', () => {
-            if (isRunning) {
-                stopTimer(); // Pause timer if app loses focus
+        // Intelligent timer: Pause when app is in background
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden) {
+                if (isRunning) {
+                    stopTimer();
+                }
             }
         });
 
-        window.addEventListener('focus', () => {
-            // No automatic resume here, user must click 'Start' again
-            // This is a safer approach for a web app where backgrounding is ambiguous.
-            // If automatic resume is desired, store `isRunning` state and resume if it was true.
-        });
+        // --- Baccalaureate Page Logic ---
+        const bacSubjectSelection = document.getElementById('bac-subject-selection');
+        const bacDetailsSelection = document.getElementById('bac-details-selection');
+        const selectedSubjectsDisplay = document.getElementById('selected-subjects-display');
+        const bacMaterialDetails = document.getElementById('bac-material-details');
+        const overallCompletionBar = document.getElementById('overall-completion-bar');
+        const overallCompletionText = document.getElementById('overall-completion-text');
 
-        /**
-         * Populates and displays the ranking modal.
-         * @param {Array<Object>} rankingsData - The array of ranking objects.
-         * @param {string} title - The title for the modal.
-         */
-        function displayRankingModal(rankingsData, title) {
-            rankingModalTitle.textContent = title;
-            topThreeRanking.innerHTML = '';
-            otherRankings.innerHTML = '';
+        const subjects = [
+            { name: 'رياضيات', id: 'math', branches: ['جميع الشعب'] },
+            { name: 'فيزياء', id: 'physics', branches: ['جميع الشعب'] },
+            { name: 'اللغة العربية', id: 'arabic', branches: ['جميع الشعب'] },
+            { name: 'فرنسية', id: 'french', branches: ['جميع الشعب'] },
+            { name: 'انجليزية', id: 'english', branches: ['جميع الشعب'] },
+            { name: 'الاجتماعيات', id: 'social', branches: ['جميع الشعب'] },
+            { name: 'الشريعة', id: 'islamic', branches: ['جميع الشعب'] },
+            { name: 'العلوم طبيعية و حياة', id: 'science', branches: ['شعبة رياضيات', 'شعبة علوم تجريبية'] }
+        ];
 
-            // Ensure rankingsData is sorted for correct top 3
-            const sortedRankings = [...rankingsData].sort((a, b) => b.score - a.score);
+        const bacYears = Array.from({ length: 2025 - 2008 + 1 }, (_, i) => 2008 + i); // Years from 2008 to 2025
 
-            // Display top 3
-            if (sortedRankings.length > 0) {
-                const rank1 = sortedRankings[0];
-                topThreeRanking.innerHTML += `
-                    <div class="flex flex-col items-center -mt-8">
-                        <img src="${rank1.avatar}" alt="المركز الأول" class="w-32 h-32 rounded-full border-4 border-yellow-400 mb-2 shadow-lg">
-                        <p class="font-bold text-xl text-yellow-300">المركز الأول</p>
-                        <p class="text-xl text-blue-100">${rank1.name} (${rank1.score})</p>
-                    </div>
-                `;
-            }
-            if (sortedRankings.length > 1) {
-                const rank2 = sortedRankings[1];
-                topThreeRanking.innerHTML += `
-                    <div class="flex flex-col items-center">
-                        <img src="${rank2.avatar}" alt="المركز الثاني" class="w-20 h-20 rounded-full border-4 border-gray-400 mb-2 shadow-md">
-                        <p class="font-semibold text-gray-200">المركز الثاني</p>
-                        <p class="text-lg text-blue-200">${rank2.name} (${rank2.score})</p>
-                    </div>
-                `;
-            }
-            if (sortedRankings.length > 2) {
-                const rank3 = sortedRankings[2];
-                topThreeRanking.innerHTML += `
-                    <div class="flex flex-col items-center">
-                        <img src="${rank3.avatar}" alt="المركز الثالث" class="w-20 h-20 rounded-full border-4 border-orange-400 mb-2 shadow-md">
-                        <p class="font-semibold text-gray-200">المركز الثالث</p>
-                        <p class="text-lg text-blue-200">${rank3.name} (${rank3.score})</p>
-                    </div>
-                `;
-            }
+        let selectedBacSubjects = JSON.parse(localStorage.getItem('selectedBacSubjects')) || [];
+        let solvedBacYears = JSON.parse(localStorage.getItem('solvedBacYears')) || {};
+        // solvedBacYears structure: { 'subjectId': { 'branchName': { 'year': true/false } } }
 
-            // Display ranks 4-10
-            for (let i = 3; i < Math.min(10, sortedRankings.length); i++) {
-                const rank = sortedRankings[i];
-                otherRankings.innerHTML += `
-                    <div class="flex items-center p-2 rounded-lg mb-2 bg-blue-800">
-                        <img src="${rank.avatar}" alt="${rank.name}" class="w-10 h-10 rounded-full mr-3 border-2 border-blue-400">
-                        <span class="font-semibold text-white mr-2">${i + 1}.</span>
-                        <span class="text-gray-200 flex-grow">${rank.name}</span>
-                        <span class="text-blue-100 font-bold">${rank.score}</span>
-                    </div>
-                `;
-            }
-
-            // Display user's own rank if not in top 10
-            const userRankIndex = sortedRankings.findIndex(r => r.name === 'اسم المستخدم');
-            if (userRankIndex !== -1 && userRankIndex >= 10) {
-                const userRank = sortedRankings[userRankIndex];
-                otherRankings.innerHTML += `
-                    <div class="flex items-center p-2 rounded-lg mt-4 bg-purple-700 border-2 border-purple-400">
-                        <img src="${userRank.avatar}" alt="${userRank.name}" class="w-10 h-10 rounded-full mr-3 border-2 border-purple-300">
-                        <span class="font-semibold text-white mr-2">${userRankIndex + 1}.</span>
-                        <span class="text-gray-100 flex-grow">${userRank.name} (أنت)</span>
-                        <span class="text-purple-100 font-bold">${userRank.score}</span>
-                    </div>
-                `;
-            } else if (userRankIndex === -1) {
-                 // If user is not in the dummy data, add a placeholder for their rank
-                 otherRankings.innerHTML += `
-                    <div class="flex items-center p-2 rounded-lg mt-4 bg-purple-700 border-2 border-purple-400">
-                        <img src="https://placehold.co/50x50/4299e1/ffffff?text=User" alt="اسم المستخدم" class="w-10 h-10 rounded-full mr-3 border-2 border-purple-300">
-                        <span class="font-semibold text-white mr-2">--.</span>
-                        <span class="text-gray-100 flex-grow">اسم المستخدم (أنت)</span>
-                        <span class="text-purple-100 font-bold">${userOverallScore}</span>
-                    </div>
-                `;
-            }
-
-            rankingModal.classList.remove('hidden');
+        function saveBacState() {
+            localStorage.setItem('selectedBacSubjects', JSON.stringify(selectedBacSubjects));
+            localStorage.setItem('solvedBacYears', JSON.stringify(solvedBacYears));
         }
 
-        generalRankingBtn.addEventListener('click', () => {
-            // Update user's score in the generalRankings before displaying
-            const userIndex = generalRankings.findIndex(r => r.name === 'اسم المستخدم');
-            if (userIndex !== -1) {
-                generalRankings[userIndex].score = userOverallScore;
+        function renderSubjectSelection() {
+            const subjectGrid = bacSubjectSelection.querySelector('.grid');
+            subjectGrid.innerHTML = '';
+            subjects.forEach(subject => {
+                const button = document.createElement('button');
+                button.className = `subject-button ${selectedBacSubjects.includes(subject.id) ? 'selected' : ''}`;
+                button.textContent = subject.name;
+                button.dataset.subjectId = subject.id;
+                button.addEventListener('click', () => {
+                    if (selectedBacSubjects.includes(subject.id)) {
+                        selectedBacSubjects = selectedBacSubjects.filter(id => id !== subject.id);
+                    } else {
+                        selectedBacSubjects.push(subject.id);
+                    }
+                    renderSubjectSelection(); // Re-render to update selection state
+                });
+                subjectGrid.appendChild(button);
+            });
+        }
+
+        function renderBacDetails() {
+            selectedSubjectsDisplay.innerHTML = '';
+            bacMaterialDetails.innerHTML = '';
+
+            if (selectedBacSubjects.length === 0) {
+                selectedSubjectsDisplay.innerHTML = '<p class="text-gray-400">لم يتم اختيار أي مواد بعد.</p>';
             } else {
-                generalRankings.push({ name: 'اسم المستخدم', score: userOverallScore, avatar: 'https://placehold.co/50x50/4299e1/ffffff?text=User' });
+                selectedBacSubjects.forEach(subjectId => {
+                    const subject = subjects.find(s => s.id === subjectId);
+                    if (subject) {
+                        const span = document.createElement('span');
+                        span.className = 'bg-blue-700 text-white text-sm px-3 py-1 rounded-full';
+                        span.textContent = subject.name;
+                        selectedSubjectsDisplay.appendChild(span);
+
+                        // Render branches and years for each selected subject
+                        const subjectDetailDiv = document.createElement('div');
+                        subjectDetailDiv.className = 'bg-gray-800 p-6 rounded-2xl shadow-xl mb-6';
+                        subjectDetailDiv.innerHTML = `
+                            <h3 class="text-xl font-semibold text-blue-300 mb-4">${subject.name}</h3>
+                            <div class="flex flex-wrap gap-3 mb-4" id="branches-${subject.id}">
+                                </div>
+                            <div id="years-${subject.id}" class="grid grid-cols-4 md:grid-cols-6 gap-3">
+                                </div>
+                        `;
+                        bacMaterialDetails.appendChild(subjectDetailDiv);
+
+                        const branchContainer = document.getElementById(`branches-${subject.id}`);
+                        const yearsContainer = document.getElementById(`years-${subject.id}`);
+
+                        // Initialize solved years for this subject/branch if not exists
+                        if (!solvedBacYears[subject.id]) {
+                            solvedBacYears[subject.id] = {};
+                        }
+
+                        subject.branches.forEach(branchName => {
+                            const branchButton = document.createElement('button');
+                            branchButton.className = `branch-button ${solvedBacYears[subject.id].selectedBranch === branchName ? 'selected' : ''}`;
+                            branchButton.textContent = branchName;
+                            branchButton.dataset.branchName = branchName;
+                            branchButton.addEventListener('click', () => {
+                                solvedBacYears[subject.id].selectedBranch = branchName;
+                                saveBacState();
+                                renderBacDetails(); // Re-render to update selected branch and years
+                            });
+                            branchContainer.appendChild(branchButton);
+
+                            // Render years only for the selected branch
+                            if (solvedBacYears[subject.id].selectedBranch === branchName) {
+                                yearsContainer.innerHTML = ''; // Clear previous years
+                                if (!solvedBacYears[subject.id][branchName]) {
+                                    solvedBacYears[subject.id][branchName] = {};
+                                }
+                                bacYears.forEach(year => {
+                                    const yearButton = document.createElement('button');
+                                    yearButton.className = `year-button ${solvedBacYears[subject.id][branchName][year] ? 'solved' : ''}`;
+                                    yearButton.textContent = year;
+                                    yearButton.dataset.year = year;
+                                    yearButton.addEventListener('click', () => {
+                                        solvedBacYears[subject.id][branchName][year] = !solvedBacYears[subject.id][branchName][year];
+                                        saveBacState();
+                                        renderBacDetails(); // Re-render to update solved state and completion
+                                    });
+                                    yearsContainer.appendChild(yearButton);
+                                });
+                            }
+                        });
+                        // Auto-select first branch if none selected
+                        if (!solvedBacYears[subject.id].selectedBranch && subject.branches.length > 0) {
+                            solvedBacYears[subject.id].selectedBranch = subject.branches[0];
+                            saveBacState();
+                            renderBacDetails(); // Re-render to show years for auto-selected branch
+                        }
+                    }
+                });
             }
-            displayRankingModal(generalRankings, 'التصنيف العام');
+            calculateOverallCompletion();
+            saveBacState(); // Save state after rendering
+        }
+
+        function calculateOverallCompletion() {
+            let totalPossibleYears = 0;
+            let solvedYearsCount = 0;
+
+            selectedBacSubjects.forEach(subjectId => {
+                const subject = subjects.find(s => s.id === subjectId);
+                if (subject) {
+                    subject.branches.forEach(branchName => {
+                        totalPossibleYears += bacYears.length;
+                        if (solvedBacYears[subject.id] && solvedBacYears[subject.id][branchName]) {
+                            Object.values(solvedBacYears[subject.id][branchName]).forEach(isSolved => {
+                                if (isSolved) {
+                                    solvedYearsCount++;
+                                }
+                            });
+                        }
+                    });
+                }
+            });
+
+            const completionPercentage = totalPossibleYears > 0 ? Math.round((solvedYearsCount / totalPossibleYears) * 100) : 0;
+            overallCompletionBar.style.width = `${completionPercentage}%`;
+            overallCompletionText.textContent = `${completionPercentage}% مكتمل`;
+        }
+
+
+        document.getElementById('bac-continue-subjects').addEventListener('click', () => {
+            bacSubjectSelection.style.display = 'none';
+            bacDetailsSelection.style.display = 'block';
+            renderBacDetails();
         });
 
-        weeklyRankingBtn.addEventListener('click', () => {
-             // Update user's score in the weeklyRankings before displaying
-            const userIndex = weeklyRankings.findIndex(r => r.name === 'اسم المستخدم');
-            if (userIndex !== -1) {
-                weeklyRankings[userIndex].score = studyScore; // Weekly score is tied to current study session for this demo
-            } else {
-                weeklyRankings.push({ name: 'اسم المستخدم', score: studyScore, avatar: 'https://placehold.co/50x50/4299e1/ffffff?text=User' });
-            }
-            displayRankingModal(weeklyRankings, 'التصنيف الأسبوعي');
+        document.getElementById('bac-edit-subjects').addEventListener('click', () => {
+            bacSubjectSelection.style.display = 'block';
+            bacDetailsSelection.style.display = 'none';
+            renderSubjectSelection();
         });
 
-        rankingCloseBtn.addEventListener('click', () => {
-            rankingModal.classList.add('hidden');
-        });
+        // Initial render for baccalaureate page
+        renderSubjectSelection();
+        calculateOverallCompletion();
 
-        // Initialize the app on window load
-        window.onload = initializeApp;
+        // Prevent horizontal scrolling on mobile devices
+        document.documentElement.style.overflowX = 'hidden';
+        document.body.style.overflowX = 'hidden';
+
     </script>
 </body>
 </html>
