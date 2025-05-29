@@ -22,22 +22,28 @@
         /* Custom styles for animations and font */
         @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;800;900&display=swap');
 
-        body {
-            font-family: 'Cairo', sans-serif;
-            direction: rtl; /* Right-to-left for Arabic */
+        html, body {
+            height: 100%; /* Ensure html and body take full height */
             margin: 0;
             padding: 0;
-            overflow: hidden; /* Prevent body scroll */
-            height: 100vh;
+            font-family: 'Cairo', sans-serif;
+            direction: rtl; /* Right-to-left for Arabic */
         }
 
         #app-container {
             display: flex;
             flex-direction: column;
-            min-height: 100vh;
+            min-height: 100vh; /* Use min-height to allow content to push height */
             background: linear-gradient(to bottom right, #0a0a2a, #1a1a4a); /* Dark blue to indigo */
             color: white;
-            overflow: hidden;
+            overflow: hidden; /* Keep overall container hidden to manage internal scrolling */
+        }
+
+        /* Main content area should handle its own scrolling */
+        #main-content {
+            flex: 1; /* Allows it to grow and take available space */
+            overflow-y: auto; /* Enable vertical scrolling */
+            padding-bottom: 5rem; /* Space for bottom nav bar */
         }
 
         .animate-spin-slow {
@@ -157,17 +163,25 @@
             max-width: 28rem; /* max-w-md */
             animation: fadeInUp 0.6s ease-out forwards;
         }
+
+        /* Specific style for Counter Page background */
+        .counter-page-gradient {
+            background: linear-gradient(to bottom right, #1a2b4a, #0d1a33); /* A slightly different dark blue gradient */
+            border-radius: 1.5rem; /* rounded-2xl */
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05); /* shadow-xl */
+            border: 2px solid #3b82f6; /* border-blue-500 */
+        }
     </style>
 </head>
 <body>
-    <div id="app-container" class="relative flex flex-col min-h-screen bg-gradient-to-br from-blue-900 to-indigo-950 text-white overflow-hidden font-cairo">
+    <div id="app-container" class="relative flex flex-col min-h-screen bg-gradient-to-br from-blue-900 to-indigo-950 text-white font-cairo">
         <div class="absolute inset-0 z-0 opacity-20">
             </div>
 
         <div id="loading-screen" class="relative z-10 flex flex-col items-center justify-center min-h-screen p-6 text-center">
             </div>
 
-        <main id="main-content" class="relative z-10 flex-1 p-4 pb-20 overflow-y-auto hidden">
+        <main id="main-content" class="relative z-10 p-4 pb-20 hidden">
             </main>
 
         <nav id="bottom-nav" class="fixed bottom-0 left-0 right-0 z-20 bg-gradient-to-t from-blue-950 to-blue-900 border-t-2 border-blue-700 shadow-lg p-3 flex justify-around items-center rounded-t-3xl hidden">
@@ -193,7 +207,7 @@
             modalContent: '',
             showRankingModal: false,
             currentRankingType: '',
-            user: null,
+            user: null, // Will store Telegram user data or mock data
             userId: null,
             db: null,
             auth: null,
@@ -228,7 +242,7 @@
 
         const yearsData = Array.from({ length: 18 }, (_, i) => 2008 + i); // Years from 2008 to 2025
 
-        // Mock Telegram WebApp data for development
+        // Mock Telegram WebApp data for development and when not running in Telegram
         const mockTelegramUser = {
             id: '123456789',
             first_name: 'طالب',
@@ -554,30 +568,32 @@
 
         function renderCounterPage(container) {
             container.innerHTML = `
-                <div class="flex flex-col items-center justify-center min-h-[calc(100vh-120px)] animate-fade-in-up">
-                    <div class="relative w-full max-w-xs aspect-square mb-8">
-                        <img
-                            src="https://placehold.co/400x400/2C3E50/ECF0F1?text=طالب+يدرس"
-                            alt="Studying Person"
-                            class="w-full h-full object-cover rounded-full shadow-2xl border-4 border-blue-400 animate-pulse-light"
-                        />
-                    </div>
-
-                    <div class="relative w-64 h-64 flex items-center justify-center mb-8 bg-gradient-to-br from-blue-700 to-blue-900 rounded-full shadow-xl border-4 border-blue-500 animate-scale-in">
-                        <div class="absolute inset-0 rounded-full animate-pulse-border"></div>
-                        <div class="text-center">
-                            <p id="timer-display" class="text-6xl font-extrabold text-green-400 drop-shadow-lg mb-2 animate-bounce-text">
-                                ${new Date(appState.timeElapsed * 1000).toISOString().substr(11, 8)}
-                            </p>
-                            <p class="text-2xl font-bold text-blue-200">السكور: <span id="session-score-display" class="text-yellow-300">${appState.sessionScore}</span></p>
+                <div class="flex flex-col items-center justify-center min-h-[calc(100vh-120px)] animate-fade-in-up p-4">
+                    <div class="counter-page-gradient p-6 rounded-2xl shadow-xl border border-blue-500 w-full max-w-md flex flex-col items-center mb-8">
+                        <div class="relative w-full max-w-xs aspect-square mb-8">
+                            <img
+                                src="https://placehold.co/400x400/2C3E50/ECF0F1?text=طالب+يدرس"
+                                alt="Studying Person"
+                                class="w-full h-full object-cover rounded-full shadow-2xl border-4 border-blue-400 animate-pulse-light"
+                            />
                         </div>
-                    </div>
 
-                    <button id="timer-toggle-btn" class="w-full max-w-xs py-4 px-6 rounded-full font-extrabold text-2xl shadow-lg transition-all duration-300 transform hover:scale-105 active:scale-95
-                        ${appState.timerRunning ? 'bg-red-600 hover:bg-red-700 text-white' : 'bg-green-500 hover:bg-green-600 text-white'}
-                        focus:outline-none focus:ring-2 ${appState.timerRunning ? 'focus:ring-red-400' : 'focus:ring-green-400'} focus:ring-opacity-75">
-                        ${appState.timerRunning ? 'إيقاف' : 'بداية'}
-                    </button>
+                        <div class="relative w-64 h-64 flex items-center justify-center mb-8 bg-gradient-to-br from-blue-700 to-blue-900 rounded-full shadow-xl border-4 border-blue-500 animate-scale-in">
+                            <div class="absolute inset-0 rounded-full animate-pulse-border"></div>
+                            <div class="text-center">
+                                <p id="timer-display" class="text-6xl font-extrabold text-green-400 drop-shadow-lg mb-2 animate-bounce-text">
+                                    ${new Date(appState.timeElapsed * 1000).toISOString().substr(11, 8)}
+                                </p>
+                                <p class="text-2xl font-bold text-blue-200">السكور: <span id="session-score-display" class="text-yellow-300">${appState.sessionScore}</span></p>
+                            </div>
+                        </div>
+
+                        <button id="timer-toggle-btn" class="w-full max-w-xs py-4 px-6 rounded-full font-extrabold text-2xl shadow-lg transition-all duration-300 transform hover:scale-105 active:scale-95
+                            ${appState.timerRunning ? 'bg-red-600 hover:bg-red-700 text-white' : 'bg-green-500 hover:bg-green-600 text-white'}
+                            focus:outline-none focus:ring-2 ${appState.timerRunning ? 'focus:ring-red-400' : 'focus:ring-green-400'} focus:ring-opacity-75">
+                            ${appState.timerRunning ? 'إيقاف' : 'بداية'}
+                        </button>
+                    </div>
                 </div>
             `;
             document.getElementById('timer-toggle-btn').addEventListener('click', () => {
@@ -819,7 +835,7 @@
         }
 
         function handleNextOnboarding() {
-            if (appState.onboardingStep < onboardingContent.length) { // Corrected condition
+            if (appState.onboardingStep < onboardingContent.length) {
                 appState.onboardingStep++;
                 renderLoadingScreen();
             } else {
@@ -980,12 +996,24 @@
                 appState.auth = window.firebaseAuth;
                 appState.appId = window.appId;
 
+                // Attempt to get Telegram user data
+                let telegramUser = mockTelegramUser;
+                if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initDataUnsafe && window.Telegram.WebApp.initDataUnsafe.user) {
+                    telegramUser = window.Telegram.WebApp.initDataUnsafe.user;
+                    console.log("Telegram WebApp user data loaded:", telegramUser);
+                } else {
+                    console.warn("Telegram WebApp user data not available. Using mock data. Is the app running inside Telegram?");
+                    if (window.Telegram && window.Telegram.WebApp) {
+                        console.warn("Telegram.WebApp is available, but initDataUnsafe.user is missing or empty.", window.Telegram.WebApp.initDataUnsafe);
+                    } else {
+                        console.warn("window.Telegram.WebApp is not available.");
+                    }
+                }
+                appState.user = telegramUser;
+
                 const unsubscribe = appState.auth.onAuthStateChanged(async (currentUser) => {
                     if (currentUser) {
                         appState.userId = currentUser.uid;
-                        // Attempt to get user data from Telegram WebApp
-                        const telegramUser = window.Telegram?.WebApp?.initDataUnsafe?.user || mockTelegramUser;
-                        appState.user = telegramUser;
                         appState.isAuthReady = true;
                     } else {
                         // Sign in anonymously if no initial token or user
@@ -999,7 +1027,8 @@
                     renderLoadingScreen(); // Transition from loading to main content
                 });
 
-                // Fetch user data and rankings
+                // Fetch user data and rankings AFTER auth is ready
+                // Using a custom event to ensure Firebase auth is fully set up
                 document.addEventListener('authReady', () => {
                     if (!appState.db || !appState.userId || !appState.isAuthReady) return;
 
@@ -1045,18 +1074,19 @@
                 });
 
                 // Dispatch a custom event when authentication is ready
+                // This is a workaround to ensure listeners are set up after auth
+                let _isAuthReady = false;
                 Object.defineProperty(appState, 'isAuthReady', {
                     set: function(value) {
-                        this._isAuthReady = value;
+                        _isAuthReady = value;
                         if (value) {
                             document.dispatchEvent(new Event('authReady'));
                         }
                     },
                     get: function() {
-                        return this._isAuthReady;
+                        return _isAuthReady;
                     }
                 });
-
 
             } catch (error) {
                 console.error("Error initializing Firebase:", error);
