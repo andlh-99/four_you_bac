@@ -53,7 +53,7 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, setDoc, onSnapshot, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         // Get references to HTML elements
@@ -62,6 +62,23 @@
         const userIdDisplayElement = document.getElementById('userIdDisplay');
         const closeButton = document.getElementById('closeButton');
         const appErrorMessageElement = document.getElementById('appErrorMessage');
+
+        // --- Firebase Configuration (Hardcoded for Telegram Mini App environment) ---
+        // This configuration is specific to your Firebase project.
+        // It was obtained from your Firebase Console (Project settings -> Your apps -> Web app).
+        const firebaseConfig = {
+            apiKey: "AIzaSyDVlj_UZ7b60mnGlw0jvixKfXqMYoNJyt8",
+            authDomain: "bac-mini-app.firebaseapp.com",
+            projectId: "bac-mini-app",
+            storageBucket: "bac-mini-app.firebasestorage.app",
+            messagingSenderId: "805645568393",
+            appId: "1:805645568393:web:df28b0bbbfb4eb7139f958"
+        };
+
+        // --- Static App Identifier for Firestore Path ---
+        // This ID will be used in the Firestore path (e.g., /artifacts/telegram-score-app/...).
+        // It should be a unique identifier for THIS specific mini-app.
+        const APP_IDENTIFIER_FOR_FIRESTORE = "telegram-score-app";
 
         // Declare Firebase service instances and user ID variable
         let app;
@@ -84,76 +101,32 @@
          * Initializes Firebase services (App, Firestore, Auth) and sets up authentication listener.
          */
         function initializeFirebase() {
-            let firebaseConfig = {};
-            let appId = 'default-app-id';
-            let initialAuthToken = null;
-
-            // --- Enhanced checks for global variables ---
             try {
-                if (typeof __app_id !== 'undefined' && __app_id !== null) {
-                    appId = __app_id;
-                    console.log("Canvas App ID:", appId);
-                } else {
-                    console.warn("Canvas App ID (__app_id) is undefined or null. Using default.");
-                    displayError("خطأ: معرف التطبيق غير متوفر.");
-                    return;
-                }
-
-                if (typeof __firebase_config !== 'undefined' && __firebase_config !== null) {
-                    firebaseConfig = JSON.parse(__firebase_config);
-                    console.log("Canvas Firebase Config:", firebaseConfig);
-                } else {
-                    console.warn("Canvas Firebase Config (__firebase_config) is undefined or null.");
-                    displayError("خطأ: إعدادات Firebase غير متوفرة.");
-                    return;
-                }
-
-                if (typeof __initial_auth_token !== 'undefined') {
-                    initialAuthToken = __initial_auth_token;
-                    console.log("Canvas Initial Auth Token:", initialAuthToken ? "Available" : "Not available");
-                } else {
-                    console.warn("Canvas Initial Auth Token (__initial_auth_token) is undefined.");
-                }
-
-            } catch (e) {
-                console.error("Error parsing Firebase config or accessing global variables:", e);
-                displayError("خطأ في قراءة إعدادات Firebase الأولية.");
-                return;
-            }
-            // --- End enhanced checks ---
-
-            // Validate firebaseConfig structure before initializing
-            if (!firebaseConfig || !firebaseConfig.apiKey || !firebaseConfig.projectId) {
-                console.error("Invalid Firebase config:", firebaseConfig);
-                displayError("خطأ: إعدادات Firebase غير صالحة.");
-                return;
-            }
-
-            try {
+                // Initialize Firebase app with the hardcoded configuration
                 app = initializeApp(firebaseConfig);
-                db = getFirestore(app);
-                auth = getAuth(app);
-                console.log("Firebase initialized successfully.");
+                db = getFirestore(app); // Get Firestore instance
+                auth = getAuth(app);     // Get Auth instance
+                console.log("Firebase initialized successfully with hardcoded config.");
 
+                // Set up an authentication state change listener.
+                // This ensures that Firebase operations are performed only after authentication is ready.
                 onAuthStateChanged(auth, async (user) => {
                     if (user) {
+                        // If a user is authenticated, set the userId and start listening for score changes
                         userId = user.uid;
                         console.log("User authenticated:", userId);
-                        userIdDisplayElement.textContent = userId;
-                        listenForScoreChanges(userId, appId); // Pass appId to listener
+                        userIdDisplayElement.textContent = userId; // Display the user ID on the UI
+                        listenForScoreChanges(userId, APP_IDENTIFIER_FOR_FIRESTORE); // Pass static app identifier
                         incrementButton.disabled = false; // Enable button after auth
                     } else {
-                        console.log("No user authenticated. Attempting sign-in...");
+                        // If no user is authenticated, sign in anonymously.
+                        // This is the primary authentication method for this simple mini-app.
+                        console.log("No user authenticated. Attempting anonymous sign-in...");
                         try {
-                            if (initialAuthToken) {
-                                await signInWithCustomToken(auth, initialAuthToken);
-                                console.log("Signed in with custom token.");
-                            } else {
-                                await signInAnonymously(auth);
-                                console.log("Signed in anonymously.");
-                            }
+                            await signInAnonymously(auth);
+                            console.log("Signed in anonymously.");
                         } catch (error) {
-                            console.error("Firebase authentication error:", error);
+                            console.error("Firebase anonymous authentication error:", error);
                             displayError(`خطأ في المصادقة: ${error.message}`);
                         }
                     }
@@ -167,28 +140,35 @@
         /**
          * Sets up a real-time listener for the user's score in Firestore.
          * @param {string} currentUserId - The ID of the currently authenticated user.
-         * @param {string} currentAppId - The application ID.
+         * @param {string} firestoreAppId - The static app identifier for Firestore path.
          */
-        function listenForScoreChanges(currentUserId, currentAppId) {
-            if (!db || !currentUserId || !currentAppId) {
-                console.error("Firestore DB, User ID, or App ID not available for listening.");
+        function listenForScoreChanges(currentUserId, firestoreAppId) {
+            if (!db || !currentUserId || !firestoreAppId) {
+                console.error("Firestore DB, User ID, or Firestore App ID not available for listening.");
                 displayError("خطأ: بيانات القاعدة غير جاهزة.");
                 return;
             }
 
-            const userScoreDocRef = doc(db, `artifacts/${currentAppId}/users/${currentUserId}/scores`, 'user_score');
+            // Define the document reference for the user's score using the static app identifier.
+            // Data is stored in: /artifacts/{APP_IDENTIFIER_FOR_FIRESTORE}/users/{userId}/scores/user_score
+            const userScoreDocRef = doc(db, `artifacts/${firestoreAppId}/users/${currentUserId}/scores`, 'user_score');
 
+            // Use onSnapshot to listen for real-time changes to the document
             onSnapshot(userScoreDocRef, (docSnap) => {
                 if (docSnap.exists()) {
+                    // If the document exists, get the score and update the UI
                     const data = docSnap.data();
                     currentScoreElement.textContent = data.score !== undefined ? data.score : 0;
                     console.log("Score updated:", data.score);
                 } else {
+                    // If the document does not exist (first time user), initialize score to 0
                     currentScoreElement.textContent = 0;
                     console.log("No score found for this user. Initializing to 0.");
+                    // Set initial score to 0 in Firestore
                     setDoc(userScoreDocRef, { score: 0 }).catch(e => console.error("Error setting initial score:", e));
                 }
             }, (error) => {
+                // Log and display any errors during snapshot listening
                 console.error("Error listening to score changes:", error);
                 displayError(`خطأ في جلب السكور: ${error.message}`);
             });
@@ -204,7 +184,8 @@
                 return;
             }
 
-            const userScoreDocRef = doc(db, `artifacts/${appId}/users/${userId}/scores`, 'user_score'); // Use global appId
+            // Use the static app identifier for the Firestore path
+            const userScoreDocRef = doc(db, `artifacts/${APP_IDENTIFIER_FOR_FIRESTORE}/users/${userId}/scores`, 'user_score');
 
             try {
                 const docSnap = await getDoc(userScoreDocRef);
