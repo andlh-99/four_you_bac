@@ -1,93 +1,215 @@
 <!DOCTYPE html>
-<html lang="ar">
-<head>
+<html lang="ar" dir="rtl"> <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>معلومات المستخدم - تطبيق تيليجرام المصغر</title>
+    <title>تطبيق السكور - تيليجرام المصغر</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         /* Custom styles for the Inter font and general body styling */
         body {
             font-family: 'Inter', sans-serif;
-            background-color: #f0f2f5; /* Light gray background */
+            background-color: #f0f2f5; /* Light gray background for the app */
             display: flex;
             justify-content: center;
             align-items: center;
-            min-height: 100vh; /* Full viewport height */
+            min-height: 100vh; /* Full viewport height to center content */
             margin: 0;
             padding: 1rem; /* Add some padding for smaller screens */
             box-sizing: border-box; /* Include padding in element's total width and height */
         }
         /* Ensure the main container is centered and responsive */
         .container {
-            max-width: 400px; /* Max width for the card */
+            max-width: 400px; /* Max width for the card on larger screens */
             width: 100%; /* Full width on smaller screens */
         }
     </style>
 </head>
 <body>
     <div class="container bg-white p-6 rounded-lg shadow-xl text-center">
-        <h1 class="text-2xl font-bold mb-6 text-gray-800">معلومات المستخدم</h1>
+        <h1 class="text-2xl font-bold mb-4 text-gray-800">تطبيق السكور الخاص بي</h1>
+        <p class="text-sm text-gray-500 mb-4">معرف المستخدم: <span id="userIdDisplay" class="font-mono text-blue-600 break-all">جارٍ التحميل...</span></p>
 
         <div class="mb-6">
-            <img id="userPhoto" src="https://placehold.co/128x128/aabbcc/ffffff?text=صورة" alt="صورة المستخدم" class="w-32 h-32 rounded-full mx-auto mb-4 object-cover border-4 border-blue-400 shadow-md">
-            <p class="text-lg font-semibold text-gray-700">مرحباً، <span id="userFirstName" class="text-blue-600"></span>!</p>
-            <p class="text-sm text-gray-500">معرف المستخدم: <span id="userId"></span></p>
+            <p class="text-lg font-semibold text-gray-700">السكور الحالي:</p>
+            <p id="currentScore" class="text-5xl font-extrabold text-green-600 my-4">0</p>
         </div>
 
-        <button id="closeButton" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-lg shadow-md transition duration-300 ease-in-out transform hover:scale-105">
+        <div class="flex justify-center space-x-4 mb-6">
+            <button id="incrementButton" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-6 rounded-lg shadow-md transition duration-300 ease-in-out transform hover:scale-105">
+                زيادة السكور (+1)
+            </button>
+        </div>
+
+        <button id="closeButton" class="bg-gray-400 hover:bg-gray-500 text-white font-bold py-2 px-4 rounded-lg shadow-md transition duration-300 ease-in-out transform hover:scale-105">
             إغلاق التطبيق المصغر
         </button>
     </div>
 
-    <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <script>
-        // Ensure the Telegram Web App SDK is ready before accessing its properties
-        window.Telegram.WebApp.ready();
+    <!-- These scripts import Firebase libraries from CDN.
+         They must be loaded before any Firebase services are used. -->
+    <script type="module">
+        // Import specific Firebase functions needed for app, auth, and firestore
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, onSnapshot, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // Get references to the HTML elements
-        const userFirstNameElement = document.getElementById('userFirstName');
-        const userIdElement = document.getElementById('userId');
-        const userPhotoElement = document.getElementById('userPhoto');
+        // Global variables provided by the Canvas environment.
+        // These variables contain your Firebase project configuration and authentication token.
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+
+        // Declare Firebase service instances and user ID variable
+        let app;
+        let db;
+        let auth;
+        let userId = null; // Stores the authenticated user's ID
+
+        // Get references to HTML elements
+        const currentScoreElement = document.getElementById('currentScore');
+        const incrementButton = document.getElementById('incrementButton');
+        const userIdDisplayElement = document.getElementById('userIdDisplay');
         const closeButton = document.getElementById('closeButton');
 
-        // Check if user data is available from Telegram
-        if (window.Telegram.WebApp.initDataUnsafe && window.Telegram.WebApp.initDataUnsafe.user) {
-            const user = window.Telegram.WebApp.initDataUnsafe.user;
+        /**
+         * Initializes Firebase services (App, Firestore, Auth) and sets up authentication listener.
+         */
+        function initializeFirebase() {
+            try {
+                // Initialize Firebase app with the provided configuration
+                app = initializeApp(firebaseConfig);
+                db = getFirestore(app); // Get Firestore instance
+                auth = getAuth(app);     // Get Auth instance
+                console.log("Firebase initialized successfully.");
 
-            // Display user's first name
-            userFirstNameElement.textContent = user.first_name || 'غير معروف';
-
-            // Display user's ID
-            userIdElement.textContent = user.id || 'غير متوفر';
-
-            // Display user's profile photo, or a placeholder if not available
-            if (user.photo_url) {
-                userPhotoElement.src = user.photo_url;
-            } else {
-                // Fallback placeholder image if no photo URL is provided
-                userPhotoElement.src = "https://placehold.co/128x128/aabbcc/ffffff?text=لا+صورة";
+                // Set up an authentication state change listener.
+                // This ensures that Firebase operations are performed only after authentication is ready.
+                onAuthStateChanged(auth, async (user) => {
+                    if (user) {
+                        // If a user is authenticated, set the userId and start listening for score changes
+                        userId = user.uid;
+                        console.log("User authenticated:", userId);
+                        userIdDisplayElement.textContent = userId; // Display the user ID on the UI
+                        listenForScoreChanges(userId); // Start listening for score updates
+                    } else {
+                        // If no user is authenticated, attempt to sign in.
+                        console.log("No user authenticated. Attempting sign-in...");
+                        try {
+                            if (initialAuthToken) {
+                                // Try signing in with the custom token provided by Canvas environment
+                                await signInWithCustomToken(auth, initialAuthToken);
+                                console.log("Signed in with custom token.");
+                            } else {
+                                // If no custom token, sign in anonymously
+                                await signInAnonymously(auth);
+                                console.log("Signed in anonymously.");
+                            }
+                        } catch (error) {
+                            console.error("Firebase authentication error:", error);
+                            userIdDisplayElement.textContent = "خطأ في المصادقة"; // Display error message
+                        }
+                    }
+                });
+            } catch (error) {
+                console.error("Failed to initialize Firebase:", error);
+                userIdDisplayElement.textContent = "خطأ في تهيئة Firebase"; // Display initialization error
             }
-        } else {
-            // If running outside Telegram Web App context or data is missing
-            userFirstNameElement.textContent = 'مستخدم تجريبي';
-            userIdElement.textContent = '123456789';
-            userPhotoElement.src = "https://placehold.co/128x128/aabbcc/ffffff?text=لا+صورة";
-            console.warn("Telegram Web App data not available or user info is missing. Running in standalone mode.");
         }
+
+        /**
+         * Sets up a real-time listener for the user's score in Firestore.
+         * Updates the UI whenever the score changes in the database.
+         * @param {string} currentUserId - The ID of the currently authenticated user.
+         */
+        function listenForScoreChanges(currentUserId) {
+            if (!db || !currentUserId) {
+                console.error("Firestore DB or User ID not available for listening.");
+                return;
+            }
+
+            // Define the document reference for the user's score.
+            // Data is stored in: /artifacts/{appId}/users/{userId}/scores/user_score
+            const userScoreDocRef = doc(db, `artifacts/${appId}/users/${currentUserId}/scores`, 'user_score');
+
+            // Use onSnapshot to listen for real-time changes to the document
+            onSnapshot(userScoreDocRef, (docSnap) => {
+                if (docSnap.exists()) {
+                    // If the document exists, get the score and update the UI
+                    const data = docSnap.data();
+                    currentScoreElement.textContent = data.score !== undefined ? data.score : 0;
+                    console.log("Score updated:", data.score);
+                } else {
+                    // If the document does not exist (first time user), initialize score to 0
+                    currentScoreElement.textContent = 0;
+                    console.log("No score found for this user. Initializing to 0.");
+                    // Set initial score to 0 in Firestore
+                    setDoc(userScoreDocRef, { score: 0 }).catch(e => console.error("Error setting initial score:", e));
+                }
+            }, (error) => {
+                // Log and display any errors during snapshot listening
+                console.error("Error listening to score changes:", error);
+                currentScoreElement.textContent = "خطأ";
+            });
+        }
+
+        /**
+         * Increments the user's score by 1 and saves it to Firestore.
+         */
+        async function incrementScore() {
+            if (!db || !userId) {
+                console.error("Firebase not initialized or user not authenticated.");
+                // Provide user feedback if not ready
+                currentScoreElement.textContent = "الرجاء الانتظار...";
+                return;
+            }
+
+            // Define the document reference for the user's score
+            const userScoreDocRef = doc(db, `artifacts/${appId}/users/${userId}/scores`, 'user_score');
+
+            try {
+                // Get the current score from Firestore
+                const docSnap = await getDoc(userScoreDocRef);
+                let currentScore = 0;
+                if (docSnap.exists()) {
+                    currentScore = docSnap.data().score || 0; // Get existing score or default to 0
+                }
+                const newScore = currentScore + 1; // Increment the score
+
+                // Save the new score back to Firestore
+                await setDoc(userScoreDocRef, { score: newScore });
+                console.log("Score incremented and saved:", newScore);
+            } catch (error) {
+                console.error("Error incrementing score:", error);
+                // Display a user-friendly error message on the UI
+                currentScoreElement.textContent = "خطأ في الحفظ!";
+            }
+        }
+
+        // Add event listener to the increment button
+        incrementButton.addEventListener('click', incrementScore);
 
         // Add event listener to the close button
         closeButton.addEventListener('click', () => {
-            // Close the mini app if running inside Telegram
-            if (window.Telegram.WebApp.close) {
-                window.Telegram.WebApp.close();
+            // Check if Telegram Web App SDK is available and has the close function
+            if (window.Telegram.WebApp && window.Telegram.WebApp.close) {
+                window.Telegram.WebApp.close(); // Close the mini app
             } else {
                 console.log("Not running inside Telegram Web App. Cannot close.");
-                // Optionally, you can add a message box here for standalone testing
-                // alert("This button only works inside Telegram Web App.");
+                // Optionally, provide an in-app message for testing outside Telegram
+                // You could display a custom modal here instead of an alert
             }
         });
+
+        // Initialize Firebase when the window has fully loaded
+        window.onload = () => {
+            initializeFirebase();
+            // Ensure Telegram Web App SDK is ready for interaction
+            if (window.Telegram.WebApp) {
+                window.Telegram.WebApp.ready();
+            }
+        };
     </script>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
 </body>
 </html>
 
