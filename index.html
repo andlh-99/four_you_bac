@@ -16,101 +16,124 @@
         window.db;
         window.auth;
         window.userId; // Will store the authenticated user ID
+        let isFirebaseReady = false; // Flag to indicate Firebase is fully initialized and authenticated
 
-        // Firebase Configuration 
-        const firebaseConfig = {
-  apiKey: "AIzaSyB_ONaG8ZZM-C_c0EpZbCxr6-5EEsCTC7M",
-  authDomain: "bac-4you.firebaseapp.com",
-  projectId: "bac-4you",
-  storageBucket: "bac-4you.firebasestorage.app",
-  messagingSenderId: "10492385919",
-  appId: "1:10492385919:web:59570eefca36a2ab39fd4a",
-  measurementId: "G-CVCZ027PDM"
-};
+        // Firebase Configuration - THIS IS YOUR ACTUAL FIREBASE CONFIG
+        // If running in Canvas environment, __firebase_config will be provided automatically.
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {
+            apiKey: "AIzaSyB_ONaG8ZZM-C_c0EpZbCxr6-5EEsCTC7M",
+            authDomain: "bac-4you.firebaseapp.com",
+            projectId: "bac-4you",
+            storageBucket: "bac-4you.firebasestorage.app",
+            messagingSenderId: "10492385919",
+            appId: "1:10492385919:web:59570eefca36a2ab39fd4a",
+            measurementId: "G-CVCZ027PDM"
+        };
 
         // Initialize Firebase and authenticate
         window.initializeFirebase = async function() {
+            console.log("بدء تهيئة Firebase...");
             try {
-                // Use the global variables provided by the Canvas environment if available
-                const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id'; // Fallback for local testing
+                const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
 
-                if (Object.keys(firebaseConfig).length === 0 || firebaseConfig.apiKey === "YOUR_API_KEY") {
-                    console.error("Firebase config is missing or placeholder. Please update firebaseConfig with your actual Firebase project details.");
-                    // In a production app, you might show a user-friendly error message here.
+                if (!firebaseConfig || !firebaseConfig.apiKey || firebaseConfig.apiKey === "YOUR_API_KEY") {
+                    console.error("خطأ: إعدادات Firebase غير موجودة أو غير صحيحة. يرجى تحديث firebaseConfig بالمعلومات الفعلية لمشروعك.");
+                    displayError("خطأ في تهيئة التطبيق: يرجى التحقق من إعدادات Firebase.");
                     return;
                 }
 
                 window.app = initializeApp(firebaseConfig);
                 window.db = getFirestore(window.app);
                 window.auth = getAuth(window.app);
+                console.log("Firebase تم تهيئته بنجاح.");
 
                 // Sign in anonymously or with custom token (from Canvas env)
                 if (typeof __initial_auth_token !== 'undefined') {
                     await signInWithCustomToken(window.auth, __initial_auth_token);
-                    console.log("Signed in with custom token.");
+                    console.log("تم تسجيل الدخول باستخدام رمز مخصص.");
                 } else {
                     await signInAnonymously(window.auth);
-                    console.log("Signed in anonymously.");
+                    console.log("تم تسجيل الدخول كمجهول.");
                 }
 
-                // Listen for auth state changes to get the user ID
                 onAuthStateChanged(window.auth, (user) => {
                     if (user) {
                         window.userId = user.uid;
                         document.getElementById('user-id-display').textContent = window.userId;
-                        console.log("User ID:", window.userId);
-                        // Once authenticated, load user data
+                        console.log("معرف المستخدم:", window.userId);
+                        isFirebaseReady = true; // Set flag to true
                         loadUserData();
-                        loadBaccalaureateState(); // Load baccalaureate state after auth
+                        loadBaccalaureateState();
                     } else {
-                        // Fallback for unauthenticated users (e.g., if __initial_auth_token is not provided and anonymous sign-in fails)
-                        // Note: Data saved with a random UUID will not persist across sessions.
                         window.userId = crypto.randomUUID();
                         document.getElementById('user-id-display').textContent = window.userId + " (غير موثق)";
-                        console.log("No user signed in, using random ID:", window.userId);
+                        console.warn("لم يتم تسجيل دخول أي مستخدم، يتم استخدام معرف عشوائي:", window.userId);
+                        isFirebaseReady = true; // Still ready to operate, but data won't persist if not authenticated.
                         loadUserData();
                         loadBaccalaureateState();
                     }
                 });
 
             } catch (error) {
-                console.error("Error initializing Firebase or signing in:", error);
+                console.error("خطأ فادح أثناء تهيئة Firebase أو تسجيل الدخول:", error);
+                displayError("خطأ فادح في تهيئة Firebase. يرجى التحقق من اتصالك بالإنترنت أو إعدادات المشروع.");
             }
         };
 
+        function displayError(message) {
+            const errorDiv = document.createElement('div');
+            errorDiv.className = 'text-center text-red-500 text-xl mt-20 p-4 bg-gray-800 rounded-lg shadow-lg max-w-md mx-auto';
+            errorDiv.textContent = message;
+            mainApp.innerHTML = ''; // Clear existing content
+            mainApp.appendChild(errorDiv);
+            mainApp.style.display = 'flex'; // Ensure main app container is visible
+            onboardingOverlay.style.display = 'none'; // Hide onboarding
+            splashScreen.style.display = 'none'; // Hide splash
+        }
+
         // Firestore Data Management Functions
-        // User Profile Data (Score, Onboarding Status)
         window.getUserProfileDocRef = () => {
             const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+            if (!window.db || !window.userId) {
+                console.error("خطأ: Firestore أو معرف المستخدم غير جاهز لإنشاء مرجع المستند.");
+                return null;
+            }
             return doc(window.db, `artifacts/${appId}/users/${window.userId}/profile/data`);
         };
 
         window.loadUserData = async () => {
-            if (!window.db || !window.userId) {
-                console.warn("Firestore or User ID not ready for loading user data.");
+            if (!isFirebaseReady) {
+                console.warn("Firebase ليس جاهزًا بعد لتحميل بيانات المستخدم.");
+                // Fallback to local storage if Firebase is not ready
+                userCurrentScore = parseInt(localStorage.getItem('userCurrentScore') || '0');
+                userScoreElement.textContent = userCurrentScore;
+                checkOnboardingStatus();
                 return;
             }
             const docRef = window.getUserProfileDocRef();
+            if (!docRef) {
+                console.warn("مرجع مستند ملف المستخدم غير متاح.");
+                checkOnboardingStatus(); // Still proceed to check onboarding
+                return;
+            }
+
             onSnapshot(docRef, (docSnap) => {
                 if (docSnap.exists()) {
                     const data = docSnap.data();
                     userCurrentScore = data.score || 0;
                     userScoreElement.textContent = userCurrentScore;
-                    localStorage.setItem('seenOnboarding', data.seenOnboarding ? 'true' : 'false'); // Sync with local storage for initial check
-                    console.log("User data loaded:", data);
-                    checkOnboardingStatus(); // Check onboarding after data is loaded
+                    localStorage.setItem('seenOnboarding', data.seenOnboarding ? 'true' : 'false');
+                    console.log("تم تحميل بيانات المستخدم من Firestore:", data);
                 } else {
-                    console.log("No user profile data found, initializing.");
-                    // Initialize with default values if no data exists
+                    console.log("لم يتم العثور على بيانات ملف المستخدم، يتم التهيئة.");
                     userCurrentScore = 0;
                     userScoreElement.textContent = userCurrentScore;
-                    localStorage.setItem('seenOnboarding', 'false'); // Default to not seen
-                    checkOnboardingStatus();
-                    // Save initial data to Firestore
-                    saveUserData();
+                    localStorage.setItem('seenOnboarding', 'false');
+                    window.saveUserData(); // Save initial data to Firestore
                 }
+                checkOnboardingStatus(); // Always check onboarding status after data is loaded/initialized
             }, (error) => {
-                console.error("Error listening to user data:", error);
+                console.error("خطأ في الاستماع إلى بيانات المستخدم من Firestore:", error);
                 // Fallback to local storage if Firestore fails
                 userCurrentScore = parseInt(localStorage.getItem('userCurrentScore') || '0');
                 userScoreElement.textContent = userCurrentScore;
@@ -119,52 +142,65 @@
         };
 
         window.saveUserData = async () => {
-            if (!window.db || !window.userId) {
-                console.warn("Firestore or User ID not ready for saving user data.");
+            if (!isFirebaseReady) {
+                console.warn("Firebase ليس جاهزًا بعد لحفظ بيانات المستخدم.");
                 return;
             }
             const docRef = window.getUserProfileDocRef();
+            if (!docRef) return;
+
             try {
                 await setDoc(docRef, {
                     score: userCurrentScore,
                     seenOnboarding: localStorage.getItem('seenOnboarding') === 'true'
                 }, { merge: true });
-                console.log("User data saved successfully.");
+                console.log("تم حفظ بيانات المستخدم بنجاح إلى Firestore.");
             } catch (error) {
-                console.error("Error saving user data:", error);
+                console.error("خطأ أثناء حفظ بيانات المستخدم إلى Firestore:", error);
             }
         };
 
         // Baccalaureate Data
         window.getBaccalaureateDocRef = () => {
             const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+            if (!window.db || !window.userId) {
+                console.error("خطأ: Firestore أو معرف المستخدم غير جاهز لإنشاء مرجع مستند البكالوريا.");
+                return null;
+            }
             return doc(window.db, `artifacts/${appId}/users/${window.userId}/baccalaureate/data`);
         };
 
         window.loadBaccalaureateState = async () => {
-            if (!window.db || !window.userId) {
-                console.warn("Firestore or User ID not ready for loading baccalaureate data.");
+            if (!isFirebaseReady) {
+                console.warn("Firebase ليس جاهزًا بعد لتحميل بيانات البكالوريا.");
+                selectedBacSubjects = JSON.parse(localStorage.getItem('selectedBacSubjects')) || [];
+                solvedBacYears = JSON.parse(localStorage.getItem('solvedBacYears')) || {};
+                renderSubjectSelection();
+                renderBacDetails();
                 return;
             }
             const docRef = window.getBaccalaureateDocRef();
+            if (!docRef) {
+                console.warn("مرجع مستند البكالوريا غير متاح.");
+                return;
+            }
+
             onSnapshot(docRef, (docSnap) => {
                 if (docSnap.exists()) {
                     const data = docSnap.data();
                     selectedBacSubjects = data.selectedSubjects || [];
                     solvedBacYears = data.solvedYears || {};
-                    console.log("Baccalaureate data loaded:", data);
-                    renderSubjectSelection();
-                    renderBacDetails(); // Re-render details based on loaded state
+                    console.log("تم تحميل بيانات البكالوريا من Firestore:", data);
                 } else {
-                    console.log("No baccalaureate data found, initializing.");
+                    console.log("لم يتم العثور على بيانات البكالوريا، يتم التهيئة.");
                     selectedBacSubjects = [];
                     solvedBacYears = {};
-                    renderSubjectSelection();
-                    saveBaccalaureateState(); // Save initial empty state
+                    window.saveBaccalaureateState(); // Save initial empty state
                 }
+                renderSubjectSelection();
+                renderBacDetails();
             }, (error) => {
-                console.error("Error listening to baccalaureate data:", error);
-                // Fallback to local storage if Firestore fails
+                console.error("خطأ في الاستماع إلى بيانات البكالوريا من Firestore:", error);
                 selectedBacSubjects = JSON.parse(localStorage.getItem('selectedBacSubjects')) || [];
                 solvedBacYears = JSON.parse(localStorage.getItem('solvedBacYears')) || {};
                 renderSubjectSelection();
@@ -173,19 +209,21 @@
         };
 
         window.saveBaccalaureateState = async () => {
-            if (!window.db || !window.userId) {
-                console.warn("Firestore or User ID not ready for saving baccalaureate data.");
+            if (!isFirebaseReady) {
+                console.warn("Firebase ليس جاهزًا بعد لحفظ بيانات البكالوريا.");
                 return;
             }
             const docRef = window.getBaccalaureateDocRef();
+            if (!docRef) return;
+
             try {
                 await setDoc(docRef, {
                     selectedSubjects: selectedBacSubjects,
                     solvedYears: solvedBacYears
                 }, { merge: true });
-                console.log("Baccalaureate data saved successfully.");
+                console.log("تم حفظ بيانات البكالوريا بنجاح إلى Firestore.");
             } catch (error) {
-                console.error("Error saving baccalaureate data:", error);
+                console.error("خطأ أثناء حفظ بيانات البكالوريا إلى Firestore:", error);
             }
         };
 
@@ -660,9 +698,6 @@
     </div>
 
     <script type="module">
-        // Ensure Firebase is initialized before accessing its services
-        window.initializeFirebase();
-
         // Check if the Telegram Web App object is available
         const isTelegramWebApp = typeof window.Telegram !== 'undefined' && window.Telegram.WebApp;
 
@@ -678,8 +713,8 @@
                 splashScreen.style.opacity = '0';
                 setTimeout(() => {
                     splashScreen.style.display = 'none';
-                    // Do not call checkOnboardingStatus here directly.
-                    // It will be called after Firebase user data is loaded in loadUserData().
+                    window.initializeFirebase(); // Initialize Firebase after splash fades
+                    // checkOnboardingStatus() will be called after Firebase data loads
                 }, 1000); // Wait for fade out
             }, 2000); // Display splash for 2 seconds
         }
@@ -748,12 +783,17 @@
         onboardingCloseBtn.addEventListener('click', closeOnboarding);
 
         function checkOnboardingStatus() {
-            // This function is called after user data is loaded from Firestore
+            // This function is called after user data is loaded from Firestore (or local fallback)
+            // It decides whether to show the onboarding or the main app.
             if (localStorage.getItem('seenOnboarding') === 'true') {
-                mainApp.style.display = 'flex';
+                onboardingOverlay.style.display = 'none'; // Ensure onboarding is hidden
+                mainApp.style.display = 'flex'; // Show main app
+                console.log("Onboarding already seen, showing main app.");
             } else {
-                onboardingOverlay.style.display = 'flex';
+                onboardingOverlay.style.display = 'flex'; // Show onboarding
+                mainApp.style.display = 'none'; // Ensure main app is hidden
                 showOnboardingStep(currentOnboardingStep);
+                console.log("Showing onboarding for the first time.");
             }
         }
 
@@ -1146,6 +1186,7 @@
             // No need to save here, as individual button clicks already call saveBaccalaureateState()
         }
 
+
         function calculateOverallCompletion() {
             let totalPossibleYears = 0;
             let solvedYearsCount = 0;
@@ -1184,11 +1225,6 @@
             bacDetailsSelection.style.display = 'none';
             renderSubjectSelection();
         });
-
-        // Initial render for baccalaureate page when the page loads (before Firestore data might be ready)
-        // Data will be overwritten by Firestore data once loaded
-        // renderSubjectSelection(); // Initial render is handled by loadBaccalaureateState now
-        // calculateOverallCompletion(); // Called within renderBacDetails
 
         // Prevent horizontal scrolling on mobile devices
         document.documentElement.style.overflowX = 'hidden';
