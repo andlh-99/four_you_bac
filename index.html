@@ -466,8 +466,10 @@
                     `;
                     // Automatically advance to onboarding after a short delay
                     setTimeout(() => {
-                        appState.onboardingStep = 1;
-                        renderLoadingScreen();
+                        if (appState.loading) { // Only advance if still loading
+                            appState.onboardingStep = 1;
+                            renderLoadingScreen();
+                        }
                     }, 2000);
                 } else {
                     const currentOnboarding = onboardingContent[appState.onboardingStep - 1];
@@ -876,7 +878,7 @@
                         // No need to re-render home page, onSnapshot will handle it
                     }).catch(error => {
                         console.error("Error updating score:", error);
-                        showCustomModal("حدث خطأ أثناء تحديث النتيجة.");
+                        showCustomModal("حدث خطأ أثناء تحديث النتيجة: " + error.message);
                     });
                 }
                 updateTimerDisplay(); // Final update
@@ -960,7 +962,7 @@
                     solvedYears: currentSolvedYears
                 }).catch(error => {
                     console.error("Error updating solved years:", error);
-                    showCustomModal("حدث خطأ أثناء تحديث سنوات البكالوريا المحلولة.");
+                    showCustomModal("حدث خطأ أثناء تحديث سنوات البكالوريا المحلولة: " + error.message);
                 });
             }
         }
@@ -989,7 +991,16 @@
         // --- Initialization ---
         async function initializeApp() {
             try {
-                const firebaseConfig = JSON.parse(CANVAS_FIREBASE_CONFIG_STR);
+                let firebaseConfig;
+                try {
+                    firebaseConfig = JSON.parse(CANVAS_FIREBASE_CONFIG_STR);
+                    if (Object.keys(firebaseConfig).length === 0) {
+                        throw new Error("Firebase config is empty. Please ensure __firebase_config is provided.");
+                    }
+                } catch (parseError) {
+                    throw new Error("Invalid Firebase config JSON: " + parseError.message);
+                }
+
                 const appId = CANVAS_APP_ID;
                 const initialAuthToken = CANVAS_INITIAL_AUTH_TOKEN;
 
@@ -1030,16 +1041,27 @@
                         console.log("Firebase Auth: User signed in with UID:", currentUser.uid);
                     } else {
                         console.log("Firebase Auth: No user signed in. Attempting anonymous or custom token sign-in.");
-                        if (initialAuthToken) {
-                            await signInWithCustomToken(authentication, initialAuthToken);
-                            console.log("Firebase Auth: Signed in with custom token.");
-                        } else {
-                            await signInAnonymously(authentication);
-                            console.log("Firebase Auth: Signed in anonymously.");
+                        try {
+                            if (initialAuthToken) {
+                                await signInWithCustomToken(authentication, initialAuthToken);
+                                console.log("Firebase Auth: Signed in with custom token.");
+                            } else {
+                                await signInAnonymously(authentication);
+                                console.log("Firebase Auth: Signed in anonymously.");
+                            }
+                        } catch (authError) {
+                            console.error("Firebase Auth Error during sign-in:", authError);
+                            showCustomModal("خطأ في المصادقة: " + authError.message);
+                            appState.loading = false; // Ensure loading stops even if auth fails
+                            renderLoadingScreen();
+                            return; // Stop further execution if auth fails
                         }
                     }
-                    appState.loading = false;
-                    renderLoadingScreen(); // Transition from loading to main content
+                    // Only set loading to false here if auth was successful or handled
+                    if (appState.loading) { // Prevent multiple calls if already set to false by timeout
+                        appState.loading = false;
+                        renderLoadingScreen(); // Transition from loading to main content
+                    }
                 });
 
                 // Fetch user data and rankings AFTER auth is ready
@@ -1084,11 +1106,14 @@
                                 photo_url: appState.user?.photo_url || 'https://placehold.co/100x100/3498db/ffffff?text=صورة'
                             }, { merge: true }).then(() => {
                                 console.log("Initial user profile created.");
-                            }).catch(e => console.error("Error creating initial user profile:", e));
+                            }).catch(e => {
+                                console.error("Error creating initial user profile:", e);
+                                showCustomModal("خطأ في إنشاء ملف المستخدم: " + e.message);
+                            });
                         }
                     }, (error) => {
                         console.error("Error fetching user data from Firestore:", error);
-                        showCustomModal("حدث خطأ أثناء جلب بيانات المستخدم.");
+                        showCustomModal("حدث خطأ أثناء جلب بيانات المستخدم من Firestore: " + error.message);
                     });
 
                     const generalRankingRef = collection(appState.db, `artifacts/${appState.appId}/public/data/rankings`);
@@ -1099,6 +1124,7 @@
                         console.log("General ranking updated from Firestore:", appState.generalRanking);
                     }, (error) => {
                         console.error("Error fetching general ranking from Firestore:", error);
+                        showCustomModal("حدث خطأ أثناء جلب الترتيب العام: " + error.message);
                     });
 
                     const qWeekly = query(generalRankingRef, orderBy('score', 'desc'), limit(10)); // Using same collection for simplicity
@@ -1108,14 +1134,15 @@
                         console.log("Weekly ranking updated from Firestore:", appState.weeklyRanking);
                     }, (error) => {
                         console.error("Error fetching weekly ranking from Firestore:", error);
+                        showCustomModal("حدث خطأ أثناء جلب الترتيب الأسبوعي: " + error.message);
                     });
                 });
 
             } catch (error) {
                 console.error("Critical Firebase Initialization Error:", error);
                 appState.loading = false;
-                showCustomModal(`حدث خطأ أثناء تهيئة التطبيق. يرجى المحاولة مرة أخرى. (الخطأ: ${error.message})`);
-                renderLoadingScreen();
+                showCustomModal(`حدث خطأ أثناء تهيئة التطبيق: ${error.message}. يرجى المحاولة مرة أخرى.`);
+                renderLoadingScreen(); // Ensure screen updates even on critical error
             }
         }
 
@@ -1127,6 +1154,15 @@
             renderBubbles();
             initializeApp();
             renderLoadingScreen(); // Start with loading screen
+
+            // Force loading screen completion after a timeout
+            setTimeout(() => {
+                if (appState.loading) {
+                    console.warn("Loading screen timed out. Forcing transition to main content. Firebase might still be initializing or failed.");
+                    appState.loading = false;
+                    renderLoadingScreen(); // This will trigger the transition
+                }
+            }, 7000); // 7 seconds timeout
         };
     </script>
 </body>
