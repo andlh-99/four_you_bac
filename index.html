@@ -5,19 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>4 YOU BAC</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-        import { getFirestore, doc, setDoc, updateDoc, onSnapshot, collection, query, orderBy, limit } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-
-        // Global variables for Firebase access in our script
-        window.firebaseApp = initializeApp(JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}'));
-        window.firebaseAuth = getAuth(window.firebaseApp);
-        window.firebaseDb = getFirestore(window.firebaseApp);
-        window.appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-        window.initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
-    </script>
-
     <style>
         /* Custom styles for animations and font */
         @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;800;900&display=swap');
@@ -197,7 +184,17 @@
         <div id="ranking-modal-container"></div>
     </div>
 
-    <script>
+    <script type="module">
+        // Firebase SDK imports directly in the main script
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+        import { getFirestore, doc, setDoc, updateDoc, onSnapshot, collection, query, orderBy, limit } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+        // Global variables provided by Canvas environment
+        const CANVAS_APP_ID = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        const CANVAS_FIREBASE_CONFIG_STR = typeof __firebase_config !== 'undefined' ? __firebase_config : '{}';
+        const CANVAS_INITIAL_AUTH_TOKEN = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+
         // Global state variables
         let appState = {
             loading: true,
@@ -209,8 +206,8 @@
             currentRankingType: '',
             user: null, // Will store Telegram user data or mock data
             userId: null,
-            db: null,
-            auth: null,
+            db: null, // Firebase Firestore instance
+            auth: null, // Firebase Auth instance
             isAuthReady: false,
             userScore: 0,
             generalRanking: [],
@@ -455,7 +452,7 @@
 
                 if (appState.onboardingStep === 0) {
                     loadingScreen.innerHTML = `
-                        <div class="relative z-10 flex flex-col items-center justify-center p-6 text-center">
+                        <div class="relative z-10 flex flex-col items-center justify-center min-h-screen p-6 text-center">
                             <div class="relative w-32 h-32 mb-8">
                                 <div class="absolute inset-0 border-4 border-blue-400 border-t-transparent rounded-full animate-spin-slow"></div>
                                 <div class="absolute inset-2 border-4 border-blue-300 border-b-transparent rounded-full animate-spin-fast"></div>
@@ -868,8 +865,8 @@
                 appState.timerInterval = null;
                 // Update user's total score in Firestore
                 if (appState.db && appState.userId) {
-                    const userDocRef = appState.db.doc(`artifacts/${appState.appId}/users/${appState.userId}/profile`, 'data');
-                    appState.db.updateDoc(userDocRef, {
+                    const userDocRef = doc(appState.db, `artifacts/${appState.appId}/users/${appState.userId}/profile`, 'data');
+                    updateDoc(userDocRef, {
                         score: appState.userScore + appState.sessionScore,
                         lastActive: Date.now()
                     }).then(() => {
@@ -958,8 +955,8 @@
 
             // Update Firestore
             if (appState.db && appState.userId) {
-                const userDocRef = appState.db.doc(`artifacts/${appState.appId}/users/${appState.userId}/profile`, 'data');
-                appState.db.updateDoc(userDocRef, {
+                const userDocRef = doc(appState.db, `artifacts/${appState.appId}/users/${appState.userId}/profile`, 'data');
+                updateDoc(userDocRef, {
                     solvedYears: currentSolvedYears
                 }).catch(error => {
                     console.error("Error updating solved years:", error);
@@ -992,9 +989,24 @@
         // --- Initialization ---
         async function initializeApp() {
             try {
-                appState.db = window.firebaseDb;
-                appState.auth = window.firebaseAuth;
-                appState.appId = window.appId;
+                const firebaseConfig = JSON.parse(CANVAS_FIREBASE_CONFIG_STR);
+                const appId = CANVAS_APP_ID;
+                const initialAuthToken = CANVAS_INITIAL_AUTH_TOKEN;
+
+                console.log("Attempting to initialize Firebase...");
+                console.log("Firebase Config:", firebaseConfig);
+                console.log("App ID:", appId);
+                console.log("Initial Auth Token:", initialAuthToken ? "Available" : "Not Available");
+
+                const app = initializeApp(firebaseConfig);
+                const firestore = getFirestore(app);
+                const authentication = getAuth(app);
+
+                appState.db = firestore;
+                appState.auth = authentication;
+                appState.appId = appId;
+
+                console.log("Firebase initialized successfully.");
 
                 // Attempt to get Telegram user data
                 let telegramUser = mockTelegramUser;
@@ -1002,25 +1014,28 @@
                     telegramUser = window.Telegram.WebApp.initDataUnsafe.user;
                     console.log("Telegram WebApp user data loaded:", telegramUser);
                 } else {
-                    console.warn("Telegram WebApp user data not available. Using mock data. Is the app running inside Telegram?");
+                    console.warn("Telegram WebApp user data not available. Using mock data.");
                     if (window.Telegram && window.Telegram.WebApp) {
                         console.warn("Telegram.WebApp is available, but initDataUnsafe.user is missing or empty.", window.Telegram.WebApp.initDataUnsafe);
                     } else {
-                        console.warn("window.Telegram.WebApp is not available.");
+                        console.warn("window.Telegram or window.Telegram.WebApp is not available.");
                     }
                 }
                 appState.user = telegramUser;
 
-                const unsubscribe = appState.auth.onAuthStateChanged(async (currentUser) => {
+                const unsubscribe = onAuthStateChanged(authentication, async (currentUser) => {
                     if (currentUser) {
                         appState.userId = currentUser.uid;
-                        appState.isAuthReady = true;
+                        appState.isAuthReady = true; // Trigger data fetching
+                        console.log("Firebase Auth: User signed in with UID:", currentUser.uid);
                     } else {
-                        // Sign in anonymously if no initial token or user
-                        if (window.initialAuthToken) {
-                            await appState.auth.signInWithCustomToken(window.initialAuthToken);
+                        console.log("Firebase Auth: No user signed in. Attempting anonymous or custom token sign-in.");
+                        if (initialAuthToken) {
+                            await signInWithCustomToken(authentication, initialAuthToken);
+                            console.log("Firebase Auth: Signed in with custom token.");
                         } else {
-                            await appState.auth.signInAnonymously();
+                            await signInAnonymously(authentication);
+                            console.log("Firebase Auth: Signed in anonymously.");
                         }
                     }
                     appState.loading = false;
@@ -1029,57 +1044,12 @@
 
                 // Fetch user data and rankings AFTER auth is ready
                 // Using a custom event to ensure Firebase auth is fully set up
-                document.addEventListener('authReady', () => {
-                    if (!appState.db || !appState.userId || !appState.isAuthReady) return;
-
-                    const userDocRef = appState.db.doc(`artifacts/${appState.appId}/users/${appState.userId}/profile`, 'data');
-                    appState.db.onSnapshot(userDocRef, (docSnap) => {
-                        if (docSnap.exists()) {
-                            const userData = docSnap.data();
-                            appState.userScore = userData.score || 0;
-                            appState.solvedYears = userData.solvedYears || {};
-                            calculateCompletionPercentages();
-                            renderMainContent(); // Re-render to update score/progress
-                        } else {
-                            // Create initial user profile if it doesn't exist
-                            appState.db.setDoc(userDocRef, {
-                                name: appState.user?.first_name || 'مستخدم جديد',
-                                score: 0,
-                                solvedYears: {},
-                                lastActive: Date.now(),
-                                photo_url: appState.user?.photo_url || 'https://placehold.co/100x100/3498db/ffffff?text=صورة'
-                            }, { merge: true });
-                        }
-                    }, (error) => {
-                        console.error("Error fetching user data:", error);
-                        showCustomModal("حدث خطأ أثناء جلب بيانات المستخدم.");
-                    });
-
-                    const generalRankingRef = appState.db.collection(`artifacts/${appState.appId}/public/data/rankings`);
-                    const qGeneral = appState.db.query(generalRankingRef, appState.db.orderBy('score', 'desc'), appState.db.limit(10));
-                    appState.db.onSnapshot(qGeneral, (snapshot) => {
-                        appState.generalRanking = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                        renderMainContent(); // Re-render to update rankings
-                    }, (error) => {
-                        console.error("Error fetching general ranking:", error);
-                    });
-
-                    const qWeekly = appState.db.query(generalRankingRef, appState.db.orderBy('score', 'desc'), appState.db.limit(10));
-                    appState.db.onSnapshot(qWeekly, (snapshot) => {
-                        appState.weeklyRanking = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                        renderMainContent(); // Re-render to update rankings
-                    }, (error) => {
-                        console.error("Error fetching weekly ranking:", error);
-                    });
-                });
-
-                // Dispatch a custom event when authentication is ready
-                // This is a workaround to ensure listeners are set up after auth
                 let _isAuthReady = false;
                 Object.defineProperty(appState, 'isAuthReady', {
                     set: function(value) {
                         _isAuthReady = value;
                         if (value) {
+                            console.log("Auth state is ready, dispatching 'authReady' event.");
                             document.dispatchEvent(new Event('authReady'));
                         }
                     },
@@ -1088,10 +1058,63 @@
                     }
                 });
 
+                document.addEventListener('authReady', () => {
+                    console.log("Received 'authReady' event. Starting Firestore data listeners.");
+                    if (!appState.db || !appState.userId || !appState.isAuthReady) {
+                        console.warn("Firestore data listeners cannot be started: DB, userId, or auth not ready.");
+                        return;
+                    }
+
+                    const userDocRef = doc(appState.db, `artifacts/${appState.appId}/users/${appState.userId}/profile`, 'data');
+                    onSnapshot(userDocRef, (docSnap) => {
+                        if (docSnap.exists()) {
+                            const userData = docSnap.data();
+                            appState.userScore = userData.score || 0;
+                            appState.solvedYears = userData.solvedYears || {};
+                            calculateCompletionPercentages();
+                            renderMainContent(); // Re-render to update score/progress
+                            console.log("User data updated from Firestore:", userData);
+                        } else {
+                            console.log("User profile does not exist, creating initial profile.");
+                            setDoc(userDocRef, {
+                                name: appState.user?.first_name || 'مستخدم جديد',
+                                score: 0,
+                                solvedYears: {},
+                                lastActive: Date.now(),
+                                photo_url: appState.user?.photo_url || 'https://placehold.co/100x100/3498db/ffffff?text=صورة'
+                            }, { merge: true }).then(() => {
+                                console.log("Initial user profile created.");
+                            }).catch(e => console.error("Error creating initial user profile:", e));
+                        }
+                    }, (error) => {
+                        console.error("Error fetching user data from Firestore:", error);
+                        showCustomModal("حدث خطأ أثناء جلب بيانات المستخدم.");
+                    });
+
+                    const generalRankingRef = collection(appState.db, `artifacts/${appState.appId}/public/data/rankings`);
+                    const qGeneral = query(generalRankingRef, orderBy('score', 'desc'), limit(10));
+                    onSnapshot(qGeneral, (snapshot) => {
+                        appState.generalRanking = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+                        renderMainContent(); // Re-render to update rankings
+                        console.log("General ranking updated from Firestore:", appState.generalRanking);
+                    }, (error) => {
+                        console.error("Error fetching general ranking from Firestore:", error);
+                    });
+
+                    const qWeekly = query(generalRankingRef, orderBy('score', 'desc'), limit(10)); // Using same collection for simplicity
+                    onSnapshot(qWeekly, (snapshot) => {
+                        appState.weeklyRanking = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+                        renderMainContent(); // Re-render to update rankings
+                        console.log("Weekly ranking updated from Firestore:", appState.weeklyRanking);
+                    }, (error) => {
+                        console.error("Error fetching weekly ranking from Firestore:", error);
+                    });
+                });
+
             } catch (error) {
-                console.error("Error initializing Firebase:", error);
+                console.error("Critical Firebase Initialization Error:", error);
                 appState.loading = false;
-                showCustomModal("حدث خطأ أثناء تهيئة التطبيق. يرجى المحاولة مرة أخرى.");
+                showCustomModal(`حدث خطأ أثناء تهيئة التطبيق. يرجى المحاولة مرة أخرى. (الخطأ: ${error.message})`);
                 renderLoadingScreen();
             }
         }
